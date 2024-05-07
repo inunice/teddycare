@@ -11,6 +11,7 @@
 void setup() {
   // Initialize serial communication
   Serial.begin(115200);
+  pinMode(SOUND_SENSOR_ANALOG_PIN, INPUT);
   Serial.println("Setup complete!");
 }
 
