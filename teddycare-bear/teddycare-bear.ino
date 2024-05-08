@@ -6,7 +6,7 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 // Time
-
+#include "time.h"
 
 // Define pins
 #define SOUND_SENSOR_ANALOG_PIN 35
@@ -20,7 +20,7 @@
 #define WIFI_PASSWORD "darksideofthedarkvader"
 
 // Firebase credentials
-#define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
+#define API_KEY ""
 #define DATABASE_URL "https://teddycare-12aaf-default-rtdb.asia-southeast1.firebasedatabase.app" 
 
 // Firebase
@@ -28,14 +28,38 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-
 // Firebase variables
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 
+// Time
+const char* ntpServer = "time.nist.gov";
+const long  gmtOffset_sec = 28800; // GMT+8
+const int   daylightOffset_sec = 0;
+
 // Variables
 unsigned int isCrying = 0;
+char timeStr[30];
 
+void printLocalTime() {
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+}
+
+void getTimeString(char* timeString) {
+    struct tm timeinfo;
+    if(!getLocalTime(&timeinfo)){
+        Serial.println("Failed to obtain time");
+        return;
+    }
+    
+    // Format time into string with Firebase format
+    strftime(timeString, 30, "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+}
 
 void setup() {
   
@@ -72,15 +96,6 @@ void setup() {
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 
-  // Time
-  timeClient.begin();
-  // Set offset time in seconds to adjust for your timezone, for example:
-  // GMT +1 = 3600
-  // GMT +8 = 28800
-  // GMT -1 = -3600
-  // GMT 0 = 0
-  timeClient.setTimeOffset(28800);
-
   // Pins for sensors and output
   pinMode(SOUND_SENSOR_ANALOG_PIN, INPUT);
 
@@ -89,7 +104,10 @@ void setup() {
 
 void loop() {
 
-  
+
+  //init and get the time
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
   // Variables to store cumulative sum and count of readings
   unsigned long sum = 0;
   unsigned int count = 0;
@@ -138,10 +156,21 @@ void loop() {
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();    // send every 5 seconds
 
-    // Store data to database
+    // Store the flag for crying to database
     if (Firebase.RTDB.setInt(&fbdo, "soundSensor/isCrying", isCrying)) {
       Serial.println();
       Serial.print(isCrying);
+      Serial.print(" - successfully saved to: " + fbdo.dataPath());
+      Serial.println(" (" + fbdo.dataType() + ") ");
+    } else {
+      Serial.println("FAILED: " + fbdo.errorReason());
+    }
+
+    // Store the time of crying to database
+    getTimeString(timeStr);
+    if (Firebase.RTDB.setString(&fbdo, "soundSensor/startTime", timeStr)) {
+      Serial.println();
+      Serial.print(timeStr);
       Serial.print(" - successfully saved to: " + fbdo.dataPath());
       Serial.println(" (" + fbdo.dataType() + ") ");
     } else {
