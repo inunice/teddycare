@@ -123,10 +123,12 @@ void loop() {
     }
     delay(10);    // Delay between readings
   }
-  Serial.println("Cooldown");
-  Serial.println(cryingCoolDown);
-  Serial.println("Crying?");
-  Serial.println(isCrying);
+
+  // // Check sound values
+  // Serial.print("Cooldown");
+  // Serial.println(cryingCoolDown);
+  // Serial.print("Crying?");
+  // Serial.println(isCrying);
 
   // Firebase
   // Store to database ONLY if crying is 1 and not on cooldown
