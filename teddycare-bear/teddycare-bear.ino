@@ -9,15 +9,16 @@
 #include "time.h"
 
 // Define pins
-#define SOUND_SENSOR_ANALOG_PIN 35
+#define SOUND_SENSOR_PIN 35
 
 // Constants
-#define AVERAGE_DURATION 10000          // Recording length for initial detection of crying
-#define MIN_FLUCTUATION 50              // Fluctuation for initial detection of crying
+#define SOUND_WINDOW_DURATION 5000          // Recording length for initial detection of crying
+#define SOUND_THRESHOLD 3500                // Threshold for baby crying
+#define SOUND_COOLDOWN 60000                // Gap between crying readings (60000 = 1 minute)
 
 // Network credentials
-#define WIFI_SSID "NEW"
-#define WIFI_PASSWORD "darksideofthedarkvader"
+#define WIFI_SSID "dcs-erdt"
+#define WIFI_PASSWORD "W1F14students"
 
 // Firebase credentials
 #define API_KEY ""
@@ -39,6 +40,7 @@ const int   daylightOffset_sec = 0;
 
 // Variables
 unsigned int isCrying = 0;
+unsigned int cryingCoolDown = SOUND_COOLDOWN;
 char timeStr[30];
 
 void printLocalTime() {
@@ -97,87 +99,77 @@ void setup() {
   Firebase.reconnectWiFi(true);
 
   // Pins for sensors and output
-  pinMode(SOUND_SENSOR_ANALOG_PIN, INPUT);
+  pinMode(SOUND_SENSOR_PIN, INPUT);
 
   Serial.println("Setup complete!");
 }
 
 void loop() {
 
-
-  //init and get the time
+  // initialize and get the time
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
-  // Variables to store cumulative sum and count of readings
-  unsigned long sum = 0;
-  unsigned int count = 0;
 
   // Record start time
   unsigned long startTime = millis();
 
-  // Loop to get data until the duration is reached
-  while (millis() - startTime < AVERAGE_DURATION) {
-    int soundValue = analogRead(SOUND_SENSOR_ANALOG_PIN);   // Read value from sensor
-    sum += soundValue;      // Add reading to sum
-    count++;
-    delay(10);    // Delay between readings
-  }
-
-  // Average for the duration
-  int average = sum / count;
-
-  // Monitoring
-  Serial.print("Average sound sensor value: ");
-  Serial.println(average);
-
-  // Variable to track the number of significant fluctuations
-  int fluctuationCount = 0;
-
-  // Loop again to detect fluctuations
-  startTime = millis(); // Reset start time
-  while (millis() - startTime < AVERAGE_DURATION) {
-    int soundValue = analogRead(SOUND_SENSOR_ANALOG_PIN);   // Read value from sensor
-    // Check if the absolute difference from the average exceeds the minimum fluctuation
-    if (abs(soundValue - average) >= MIN_FLUCTUATION) {
-      fluctuationCount++;
+  // Detect if crying for 5 seconds
+  while ((millis() - startTime < SOUND_WINDOW_DURATION) && (cryingCoolDown == SOUND_COOLDOWN)) {
+    int soundValue = analogRead(SOUND_SENSOR_PIN);   // Read value from sensor
+    // Serial.println(soundValue);
+    if (soundValue > SOUND_THRESHOLD) {
+      isCrying = 1;
+      Serial.println("Baby is crying!");
+      break;
     }
     delay(10);    // Delay between readings
   }
-
-  // Check if there a significant number of fluctations
-  if (fluctuationCount > 5) { // 
-    Serial.println("Baby crying detected!");
-  }
-
-  // dummy
-  isCrying = 1;
+  Serial.println("Cooldown");
+  Serial.println(cryingCoolDown);
+  Serial.println("Crying?");
+  Serial.println(isCrying);
 
   // Firebase
-  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){
-    sendDataPrevMillis = millis();    // send every 5 seconds
+  // Store to database ONLY if crying is 1 and not on cooldown
+  if ((isCrying == 1) && (cryingCoolDown == SOUND_COOLDOWN)) {
+    if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)){
+      sendDataPrevMillis = millis();    // send every second
+      Serial.println("Ready to send to database.");
+    
+      if (Firebase.RTDB.setInt(&fbdo, "soundSensor/isCrying", isCrying)) {
+        Serial.println();
+        Serial.print(isCrying);
+        Serial.print(" - successfully saved to: " + fbdo.dataPath());
+        Serial.println(" (" + fbdo.dataType() + ") ");
+      } else {
+        Serial.println("FAILED: " + fbdo.errorReason());
+      }
 
-    // Store the flag for crying to database
-    if (Firebase.RTDB.setInt(&fbdo, "soundSensor/isCrying", isCrying)) {
-      Serial.println();
-      Serial.print(isCrying);
-      Serial.print(" - successfully saved to: " + fbdo.dataPath());
-      Serial.println(" (" + fbdo.dataType() + ") ");
-    } else {
-      Serial.println("FAILED: " + fbdo.errorReason());
-    }
-
-    // Store the time of crying to database
-    getTimeString(timeStr);
-    if (Firebase.RTDB.setString(&fbdo, "soundSensor/startTime", timeStr)) {
-      Serial.println();
-      Serial.print(timeStr);
-      Serial.print(" - successfully saved to: " + fbdo.dataPath());
-      Serial.println(" (" + fbdo.dataType() + ") ");
-    } else {
-      Serial.println("FAILED: " + fbdo.errorReason());
+      // Store the time of crying to database
+      getTimeString(timeStr);
+      if (Firebase.RTDB.setString(&fbdo, "soundSensor/startTime", timeStr)) {
+        Serial.println();
+        Serial.print(timeStr);
+        Serial.print(" - successfully saved to: " + fbdo.dataPath());
+        Serial.println(" (" + fbdo.dataType() + ") ");
+      } else {
+        Serial.println("FAILED: " + fbdo.errorReason());
+      }
     }
   }
 
+  // Decrease cooldown if baby is crying
+  if (isCrying == 1) {
+    Serial.print("Crying detection on cooldown; seconds left: ");
+    Serial.println(cryingCoolDown / 1000); // Print seconds left by dividing milliseconds by 1000
+    cryingCoolDown = cryingCoolDown - 1000;
+  }
+
+  // If cooldown is done, reset cooldown!
+  if (cryingCoolDown == 0) {
+    Serial.println("Cooldown is done! We will enable sound detection again.");
+    cryingCoolDown = SOUND_COOLDOWN;
+    isCrying = 0;
+  }
 
   // Delay between readings!
   delay(1000);
