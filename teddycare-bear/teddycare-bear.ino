@@ -1,36 +1,6 @@
-// Libraries
-#include <Arduino.h>
-// Wifi
-#include <WiFi.h>
-#include <Firebase_ESP_Client.h>
-#include "addons/TokenHelper.h"
-#include "addons/RTDBHelper.h"
-// Time
-#include "time.h"
+#include "Arduino.h"
 
-// Define pins
-#define SOUND_SENSOR_PIN 35
-
-// Constants
-#define SOUND_WINDOW_DURATION 5000          // Recording length for initial detection of crying
-#define SOUND_THRESHOLD 3500                // Threshold for baby crying
-#define SOUND_COOLDOWN 60000                // Gap between crying readings (60000 = 1 minute)
-
-// Network credentials
-#define WIFI_SSID "dcs-erdt"
-#define WIFI_PASSWORD "W1F14students"
-
-// Firebase credentials
-#define API_KEY ""
-#define DATABASE_URL "https://teddycare-12aaf-default-rtdb.asia-southeast1.firebasedatabase.app" 
-
-// Firebase
-FirebaseData fbdo;
-FirebaseAuth auth;
-FirebaseConfig config;
-
-// Firebase variables
-unsigned long sendDataPrevMillis = 0;
+#define SOUND_COOLDOWN 1000                // Gap between crying readings (60000 = 1 minute)
 bool signupOK = false;
 
 // Time
