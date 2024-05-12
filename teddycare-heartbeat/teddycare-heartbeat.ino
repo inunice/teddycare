@@ -15,11 +15,11 @@
 #include "time.h"
 
 // Network credentials
-#define WIFI_SSID "GlobeAtHome_8A984_2.4"
-#define WIFI_PASSWORD "MCm7fGGY"
+#define WIFI_SSID 
+#define WIFI_PASSWORD 
 
 // Firebase credentials
-#define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
+#define API_KEY 
 #define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
 
 // Firebase
