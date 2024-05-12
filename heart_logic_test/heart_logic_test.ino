@@ -34,7 +34,7 @@ bool signupOK = false;
 // Ali Jafri's Ring Buffer
 #include <bits/stdc++.h>
 
-#define BUFFER_MAX_LEN 20 // must be changed since malalaking values nga naman
+#define BUFFER_MAX_LEN 50 // must be changed since malalaking values nga naman
 
 typedef struct RingBuffer {
     int i; // index to insert item
@@ -57,8 +57,10 @@ int insert_ring_buffer(RingBuffer *buffer, int item){
 // for debugging
 void print_ring_buffer(RingBuffer *buffer){
     for (int i = 0; i < BUFFER_MAX_LEN; i++)
-      printf("%d ", buffer->arr[i]);
-    printf("\n");
+      // printf("%d ", buffer->arr[i]);
+      Serial.print(buffer->arr[i]);
+    // printf("\n");
+    Serial.println();
 }
 
 void clear_json_array(FirebaseJsonArray *json_array){
@@ -192,51 +194,18 @@ void loop(){
 
   while((millis() - startTime < PULSE_RECORD_TIME_DURATION)) {
     // Record the IR readings
+    // Serial.println(millis() - startTime);
     int reading = particleSensor.getIR();
 
-
-    if(reading > 90000 && insert_ring_buffer(&subset, reading) ) { // if full yeah. how do u handle the case where the ring buffer is not full but time is up
+    if(reading > 90000 && insert_ring_buffer(&subset, reading)) { // if full yeah. how do u handle the case where the ring buffer is not full but time is up
       // send to firebase
       //// convert to proper array firebase in the package
-      if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
-        sendDataPrevMillis = millis();    // send every second
+      // print_ring_buffer(&subset);
 
-        // transfer contents from RingBuffer to FirebaseJsonArray
-        for (int j = 0; j <= BUFFER_MAX_LEN; j++){
-          json_array.add(subset.arr[j]);
-          // Serial.println(subset.arr[j]);
-        }
-
-        // push the array to the database in a PATH
-        sprintf(db_path, "test/arr%d", batch);
-        if (Firebase.RTDB.pushArray(&fbdo, db_path, &json_array)) {
-          Serial.println("PASSED");
-          Serial.println("PATH: " + fbdo.dataPath());
-          Serial.println("TYPE: " + fbdo.dataType());
-        }
-        else {
-          Serial.println("FAILED");
-          Serial.println("REASON: " + fbdo.errorReason());
-        }
-
-        ////////////////////but i do not want to reallocate a new json_array to save space. i want to reuse the same json_array
-        // clear the json array for reuse
-        clear_json_array(&json_array);
-
-        batch++;
-      }
-
-
+      for (int i = 0; i < BUFFER_MAX_LEN; i++)
+        Serial.println(subset.arr[i]);
+      Serial.println();
     }
    
   }
 }
-
-/*
-Issues:
-What if bumitaw, we need to record only the values in a batch with > 90000.
-Discard the 256 at the end.
-We need to update the data structure such that it records time as well.
-
-How do we process this data?
-**/
