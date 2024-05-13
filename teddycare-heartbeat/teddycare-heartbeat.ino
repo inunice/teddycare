@@ -8,18 +8,17 @@
 #include <WiFiClient.h>
 // Firebase
 #include <Firebase_ESP_Client.h>
-// #include <FirebaseJson.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 // Time
 #include "time.h"
 
 // Network credentials
-#define WIFI_SSID 
-#define WIFI_PASSWORD 
+#define WIFI_SSID "GlobeAtHome_8A984_2.4"
+#define WIFI_PASSWORD "MCm7fGGY"
 
 // Firebase credentials
-#define API_KEY 
+#define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
 #define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
 
 // Firebase
@@ -31,23 +30,35 @@ FirebaseConfig config;
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 
+// Tuple struct
+typedef struct tuple {
+  int from_start_device_time;
+  int ir_value;
+} tuple;
+
 // Ali Jafri's Ring Buffer
+
 #include <bits/stdc++.h>
 
 #define BUFFER_MAX_LEN 20 // must be changed since malalaking values nga naman
 
 typedef struct RingBuffer {
     int i; // index to insert item
-    int arr[BUFFER_MAX_LEN];
+    tuple arr[BUFFER_MAX_LEN];
 } RingBuffer;
 
 void init_ring_buffer(RingBuffer *buffer){
     buffer->i = 0;
-    for (int i = 0; i < BUFFER_MAX_LEN; i++)
-        buffer->arr[i] = 0;
+    for (int i = 0; i < BUFFER_MAX_LEN; i++) {
+      // tuple new_tuple;
+      buffer->arr[i].from_start_device_time = 0;
+      buffer->arr[i].ir_value = 0;
+      // buffer->arr[i] = new_tuple;
+    }
+
 }
 
-int insert_ring_buffer(RingBuffer *buffer, int item){
+int insert_ring_buffer(RingBuffer *buffer, tuple item){
    buffer->arr[buffer->i] = item; 
    buffer->i = (buffer->i + 1) % BUFFER_MAX_LEN;
    if (buffer->i == 0) return 1;
@@ -61,23 +72,14 @@ void print_ring_buffer(RingBuffer *buffer){
     printf("\n");
 }
 
-void clear_json_array(FirebaseJsonArray *json_array){
-  for (int i = 0; i < json_array->size(); i++)
-      json_array->remove(i);
-}
-
-// int main(){
-//     RingBuffer buffer;
-//     init_ring_buffer(&buffer);
-//     for (int i = 0; i < 2 * BUFFER_MAX_LEN; i++){
-//         insert_ring_buffer(&buffer, i + 1);
-//         print_ring_buffer(&buffer);
-//     }
-//     return 0;
+// void init_json_array(FirebaseJsonArray *json_array){
+//   // json_array->clear();
 // }
-// siguro if ang inupadte ay ang last element ng ring buffer, doon lang magsesend
 
-//
+void clear_json_array(FirebaseJsonArray *json_array){  
+  json_array->clear();
+  Serial.println(json_array->raw());
+}
 
 // data structures
 RingBuffer subset;
@@ -112,7 +114,7 @@ void setup(){
   config.api_key = API_KEY;
   config.database_url = DATABASE_URL;
   if (Firebase.signUp(&config, &auth, "", "")){
-    Serial.println("ok");
+    Serial.println("Firebase signup ok");
     signupOK = true;
   }
   else {
@@ -189,13 +191,17 @@ void loop(){
 
   // goes into an infinite cycle pala, there has to be a way na the recording will start
   // if some condition in the Firebase or in the sensor changes.
-
-  while((millis() - startTime < PULSE_RECORD_TIME_DURATION)) {
+  int duration = millis() - startTime;
+  while((duration < PULSE_RECORD_TIME_DURATION)) {
     // Record the IR readings
+
     int reading = particleSensor.getIR();
+    duration = millis() - startTime;
+    tuple new_tuple;
+    new_tuple.from_start_device_time = duration;
+    new_tuple.ir_value = reading;
 
-
-    if(reading > 90000 && insert_ring_buffer(&subset, reading) ) { // if full yeah. how do u handle the case where the ring buffer is not full but time is up
+    if(reading > 90000 && insert_ring_buffer(&subset, new_tuple) ) { // if full yeah. how do u handle the case where the ring buffer is not full but time is up
       // send to firebase
       //// convert to proper array firebase in the package
       if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
@@ -203,8 +209,10 @@ void loop(){
 
         // transfer contents from RingBuffer to FirebaseJsonArray
         for (int j = 0; j <= BUFFER_MAX_LEN; j++){
-          json_array.add(subset.arr[j]);
-          // Serial.println(subset.arr[j]);
+          FirebaseJson data_point;
+          data_point.add("from_start_device_time", subset.arr[j].from_start_device_time);
+          data_point.add("ir_value", subset.arr[j].ir_value);
+          json_array.add(data_point);
         }
 
         // push the array to the database in a PATH
