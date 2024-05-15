@@ -21,7 +21,7 @@
 #define WIFI_PASSWORD "W1F14students"
 
 // Firebase credentials
-#define API_KEY ""
+#define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
 #define DATABASE_URL "https://teddycare-12aaf-default-rtdb.asia-southeast1.firebasedatabase.app" 
 
 // Firebase

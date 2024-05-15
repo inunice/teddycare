@@ -1,71 +1,127 @@
-// sound.cpp
+#include "Arduino.h"
+#include "DFRobotDFPlayerMini.h"
 
-#include <sound.h>
+#if (defined(ARDUINO_AVR_UNO) || defined(ESP8266))   // Using a soft serial port
+#include <SoftwareSerial.h>
+SoftwareSerial softSerial(/*rx =*/27, /*tx =*/26);
+#define FPSerial softSerial
+#else
+#define FPSerial Serial1
+#endif
 
-bool parseWavHeader(File &file, WavHeader &header) {
-  if (file.read() != 'R' || file.read() != 'I' || file.read() != 'F' || file.read() != 'F') {
-    Serial.println("Invalid WAV file");
-    return false;
+DFRobotDFPlayerMini myDFPlayer;
+void printDetail(uint8_t type, int value);
+
+void setup()
+{
+#if (defined ESP32)
+  FPSerial.begin(9600, SERIAL_8N1, /*rx =*/27, /*tx =*/26);
+#else
+  FPSerial.begin(9600);
+#endif
+
+  Serial.begin(115200);
+
+  Serial.println();
+  Serial.println(F("DFRobot DFPlayer Mini Demo"));
+  Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
+  
+  if (!myDFPlayer.begin(FPSerial, /*isACK = */true, /*doReset = */true)) {  //Use serial to communicate with mp3.
+    Serial.println(F("Unable to begin:"));
+    Serial.println(F("1.Please recheck the connection!"));
+    Serial.println(F("2.Please insert the SD card!"));
+    while(true){
+      delay(0); // Code to compatible with ESP8266 watch dog.
+    }
   }
-
-  file.seek(22);
-  header.num_channels = file.read() | (file.read() << 8);
-  header.sample_rate = file.read() | (file.read() << 8) | (file.read() << 16) | (file.read() << 24);
-  file.seek(34);
-  header.bits_per_sample = file.read() | (file.read() << 8);
-  file.seek(44);  // Skip to the audio data
-  return true;
+  Serial.println(F("DFPlayer Mini online."));
+  int error = myDFPlayer.readType();
+if (error != 0) {
+  Serial.print("Error code: ");
+  Serial.println(error);
+}
+Serial.println(myDFPlayer.readState()); //read mp3 state
+Serial.println(myDFPlayer.readVolume()); //read current volume
+Serial.println(myDFPlayer.readEQ()); //read EQ setting
+Serial.println(myDFPlayer.readFileCounts()); //read all file counts in SD card
+Serial.println(myDFPlayer.readCurrentFileNumber()); //read current play file number
+Serial.println(myDFPlayer.readFileCountsInFolder(3)); //read fill counts in folder SD:/03
+  
+  myDFPlayer.volume(30);  //Set volume value. From 0 to 30
+  myDFPlayer.play(1);  //Play the first mp3
 }
 
-void setup_sound() {
-  i2s_config_t i2s_config = {
-      .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
-      .sample_rate = 44100,
-      .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-      .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-      .communication_format = I2S_COMM_FORMAT_I2S_MSB,
-      .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-      .dma_buf_count = 8,
-      .dma_buf_len = 1024,
-      .use_apll = false,
-      .tx_desc_auto_clear = true,
-  };
+void loop()
+{
+  static unsigned long timer = millis();
+  
+  if (millis() - timer > 30000) {
+    timer = millis();
+    myDFPlayer.play(2);  //Play next mp3 every 30 second.
+  }
 
-  i2s_pin_config_t pin_config = {
-      .bck_io_num = I2S_BCLK,
-      .ws_io_num = I2S_LRC,
-      .data_out_num = I2S_DOUT,
-      .data_in_num = -1,
-  };
-
-  i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
-  i2s_set_pin(I2S_NUM_0, &pin_config);
+  if (myDFPlayer.available()) {
+    printDetail(myDFPlayer.readType(), myDFPlayer.read()); //Print the detail message from DFPlayer to handle different errors and states.
+  }
 }
 
-void play_sound(std::string text, fs::FS &SD) {
-  std::string filename = "/audios/" + text + ".wav";
-  File file = SD.open(filename.c_str());
-  if (!file) {
-    Serial.println("Failed to open file for reading");
-    while (1) delay(1);
+void printDetail(uint8_t type, int value){
+  switch (type) {
+    case TimeOut:
+      Serial.println(F("Time Out!"));
+      break;
+    case WrongStack:
+      Serial.println(F("Stack Wrong!"));
+      break;
+    case DFPlayerCardInserted:
+      Serial.println(F("Card Inserted!"));
+      break;
+    case DFPlayerCardRemoved:
+      Serial.println(F("Card Removed!"));
+      break;
+    case DFPlayerCardOnline:
+      Serial.println(F("Card Online!"));
+      break;
+    case DFPlayerUSBInserted:
+      Serial.println("USB Inserted!");
+      break;
+    case DFPlayerUSBRemoved:
+      Serial.println("USB Removed!");
+      break;
+    case DFPlayerPlayFinished:
+      Serial.print(F("Number:"));
+      Serial.print(value);
+      Serial.println(F(" Play Finished!"));
+      break;
+    case DFPlayerError:
+      Serial.print(F("DFPlayerError:"));
+      switch (value) {
+        case Busy:
+          Serial.println(F("Card not found"));
+          break;
+        case Sleeping:
+          Serial.println(F("Sleeping"));
+          break;
+        case SerialWrongStack:
+          Serial.println(F("Get Wrong Stack"));
+          break;
+        case CheckSumNotMatch:
+          Serial.println(F("Check Sum Not Match"));
+          break;
+        case FileIndexOut:
+          Serial.println(F("File Index Out of Bound"));
+          break;
+        case FileMismatch:
+          Serial.println(F("Cannot Find File"));
+          break;
+        case Advertise:
+          Serial.println(F("In Advertise"));
+          break;
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
   }
-
-  WavHeader header;
-  if (!parseWavHeader(file, header)) {
-    Serial.println("Invalid WAV file");
-    return;
-  }
-
-  i2s_set_sample_rates(I2S_NUM_0, header.sample_rate);
-
-  const size_t buffer_size = 512;
-  uint8_t buffer[buffer_size];
-  size_t bytes_read;
-  size_t bytes_written;
-  while (file.available() && (bytes_read = file.read(buffer, buffer_size)) > 0) {
-    i2s_write(I2S_NUM_0, buffer, bytes_read, &bytes_written, portMAX_DELAY);
-    if (bytes_read == 0) break;
-  }
-
-  file.close();
 }
