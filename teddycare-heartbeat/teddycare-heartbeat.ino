@@ -1,11 +1,12 @@
 // Libraries
 #include <Arduino.h>
-#include <Wire.h>
+// #include <Wire.h>
 #include "MAX30105.h"
 // #include <stdio.h>
 // Wifi
 #include <ESP8266WiFi.h>
-#include <WiFiClient.h>
+// #include <WiFiClient.h>
+// #include <WiFi.h>
 // Firebase
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
@@ -18,9 +19,10 @@
 #define WIFI_PASSWORD "MCm7fGGY"
 
 // Firebase credentials
+// #define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
+// #define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
 #define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
 #define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
-
 // Firebase
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -53,16 +55,15 @@ void init_ring_buffer(RingBuffer *buffer){
       // tuple new_tuple;
       buffer->arr[i].from_start_device_time = 0;
       buffer->arr[i].ir_value = 0;
-      // buffer->arr[i] = new_tuple;
     }
 
 }
 
 int insert_ring_buffer(RingBuffer *buffer, tuple item){
-   buffer->arr[buffer->i] = item; 
-   buffer->i = (buffer->i + 1) % BUFFER_MAX_LEN;
-   if (buffer->i == 0) return 1;
-   return 0;
+  buffer->arr[buffer->i] = item; 
+  buffer->i = (buffer->i + 1) % BUFFER_MAX_LEN;
+  if (buffer->i == 0) return 1; // full indicator
+  return 0;
 }
 
 // for debugging
@@ -72,25 +73,19 @@ void print_ring_buffer(RingBuffer *buffer){
     printf("\n");
 }
 
-// void init_json_array(FirebaseJsonArray *json_array){
-//   // json_array->clear();
-// }
-
 void clear_json_array(FirebaseJsonArray *json_array){  
   json_array->clear();
-  Serial.println(json_array->raw());
 }
 
-// data structures
+// Data structures
 RingBuffer subset;
 int PULSE_RECORD_TIME_DURATION = 30000;
 FirebaseJsonArray json_array;
 char db_path[50]; // for the path of the data in the database
+int batch = 0;
+String isRecording;
 // hardware
 MAX30105 particleSensor;
-
-// i want a function that 
-
 
 void setup(){
   // Initialize serial communication
@@ -101,7 +96,7 @@ void setup(){
   Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED){
     Serial.print(".");
-    delay(300);
+    delay(500);
   }
 
   // Printing for Wi-Fi connection
@@ -172,9 +167,7 @@ void setup(){
   Serial.println("Pulse sensor now powered up!");
 
   // Setup Data structures t.y. jafri!
-
-  init_ring_buffer(&subset);
-  
+  init_ring_buffer(&subset);  
 }
 
 void loop(){
@@ -185,58 +178,78 @@ void loop(){
   // if the buffer is sent even if the remaining elements are from the previous buffer, replace them.
   // // replace their time values from [latest time] to [latest time + k] where k is the number of slots remaining in the buffer from the previous buffer iteration
   // 
-
-  unsigned long startTime = millis();
-  int batch = 0; // the batch number of the data
-
-  // goes into an infinite cycle pala, there has to be a way na the recording will start
-  // if some condition in the Firebase or in the sensor changes.
-  int duration = millis() - startTime;
-  while((duration < PULSE_RECORD_TIME_DURATION)) {
-    // Record the IR readings
-
-    int reading = particleSensor.getIR();
-    duration = millis() - startTime;
-    tuple new_tuple;
-    new_tuple.from_start_device_time = duration;
-    new_tuple.ir_value = reading;
-
-    if(reading > 90000 && insert_ring_buffer(&subset, new_tuple) ) { // if full yeah. how do u handle the case where the ring buffer is not full but time is up
-      // send to firebase
-      //// convert to proper array firebase in the package
-      if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
-        sendDataPrevMillis = millis();    // send every second
-
-        // transfer contents from RingBuffer to FirebaseJsonArray
-        for (int j = 0; j <= BUFFER_MAX_LEN; j++){
-          FirebaseJson data_point;
-          data_point.add("from_start_device_time", subset.arr[j].from_start_device_time);
-          data_point.add("ir_value", subset.arr[j].ir_value);
-          json_array.add(data_point);
-        }
-
-        // push the array to the database in a PATH
-        sprintf(db_path, "test/arr%d", batch);
-        if (Firebase.RTDB.pushArray(&fbdo, db_path, &json_array)) {
-          Serial.println("PASSED");
-          Serial.println("PATH: " + fbdo.dataPath());
-          Serial.println("TYPE: " + fbdo.dataType());
-        }
-        else {
-          Serial.println("FAILED");
-          Serial.println("REASON: " + fbdo.errorReason());
-        }
-
-        ////////////////////but i do not want to reallocate a new json_array to save space. i want to reuse the same json_array
-        // clear the json array for reuse
-        clear_json_array(&json_array);
-
-        batch++;
-      }
-
-
+  
+  if (Firebase.RTDB.getString(&fbdo, "/indicator")) {
+    if (fbdo.dataType() == "string") {
+      isRecording = fbdo.stringData();
+      Serial.println("The isRecording value is " + isRecording);
     }
-   
+  }
+  else {
+    Serial.println("Can't Fetch isRecording " + fbdo.errorReason());
+  }
+  
+  if (isRecording == "1") {
+    Serial.println("Starting Recording");
+    unsigned long startTime = millis();    
+    int duration = 0;
+
+    while((duration < PULSE_RECORD_TIME_DURATION)) {
+      // Record the IR readings
+      int reading = particleSensor.getIR();
+      duration = millis() - startTime;
+      tuple new_tuple;
+      new_tuple.from_start_device_time = duration;
+      new_tuple.ir_value = reading;
+
+      if(reading > 90000 && insert_ring_buffer(&subset, new_tuple) ) { 
+        // send to firebase
+        if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
+          sendDataPrevMillis = millis();    // send every second
+
+          // transfer contents from RingBuffer to FirebaseJsonArray
+          for (int j = 0; j <= BUFFER_MAX_LEN; j++){
+            FirebaseJson data_point;
+            data_point.add("from_start_device_time", subset.arr[j].from_start_device_time);
+            data_point.add("ir_value", subset.arr[j].ir_value);
+            json_array.add(data_point);
+          }
+
+          // push the array to the database in a PATH
+          sprintf(db_path, "test/arr%d", batch);
+          if (Firebase.RTDB.pushArray(&fbdo, db_path, &json_array)) {
+            Serial.println("PASSED");
+            Serial.println("PATH: " + fbdo.dataPath());
+            Serial.println("TYPE: " + fbdo.dataType());
+          }
+          else {
+            Serial.println("FAILED");
+            Serial.println("REASON: " + fbdo.errorReason());
+          }
+
+          
+          // clear the json array for reuse
+          clear_json_array(&json_array);
+          Serial.println(duration);
+          batch++;
+        }
+
+
+      }
+    
+    }
+
+    isRecording = "0";
+    if (Firebase.RTDB.setString(&fbdo, "/indicator", "0")){
+      Serial.println("PASSED");
+      Serial.println("PATH: " + fbdo.dataPath());
+      Serial.println("TYPE: " + fbdo.dataType());
+      Serial.println("isRecording set to 0");
+    }
+    else {
+      Serial.println("FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
 }
 
