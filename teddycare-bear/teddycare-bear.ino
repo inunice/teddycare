@@ -137,7 +137,7 @@ void loop() {
       sendDataPrevMillis = millis();    // send every second
       Serial.println("Ready to send to database.");
     
-      if (Firebase.RTDB.setInt(&fbdo, "soundSensor/isCrying", isCrying)) {
+      if (Firebase.RTDB.setInt(&fbdo, "/soundSensor/isCrying", isCrying)) {
         Serial.println();
         Serial.print(isCrying);
         Serial.print(" - successfully saved to: " + fbdo.dataPath());
@@ -148,7 +148,7 @@ void loop() {
 
       // Store the time of crying to database
       getTimeString(timeStr);
-      if (Firebase.RTDB.setString(&fbdo, "soundSensor/startTime", timeStr)) {
+      if (Firebase.RTDB.setString(&fbdo, "/soundSensor/startTime", timeStr)) {
         Serial.println();
         Serial.print(timeStr);
         Serial.print(" - successfully saved to: " + fbdo.dataPath());
