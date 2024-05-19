@@ -52,6 +52,7 @@ char timeStr[30];
 String currentAudio = "";
 String lastAudio = "None";
 unsigned int playIndex = -1;
+bool audioFinished = false;
 
 void printLocalTime() {
   struct tm timeinfo;
@@ -123,7 +124,7 @@ void setup() {
     }
   }
   Serial.println(F("DFPlayer Mini online."));
-  
+
   // Pins for sensors and output
   pinMode(SOUND_SENSOR_PIN, INPUT);
 
@@ -230,8 +231,25 @@ void loop() {
       Serial.print("Playing audio index: ");
       Serial.println(playIndex);
       myDFPlayer.play(playIndex);  // Play file
+      audioFinished = false;  // Reset audio finished flag
     }
     lastAudio = currentAudio;
+  }
+
+  // Check if audio finished playing
+  if (myDFPlayer.available() && playIndex > 0) {
+    if (!audioFinished) {
+      Serial.println("Audio finished playing.");
+      audioFinished = true;
+      currentAudio = "";  // Reset current audio
+
+      // Clear the audioPlaying field in Firebase
+      if (Firebase.RTDB.setString(&fbdo, "/speaker/audioPlaying", "0")) {
+        Serial.println("Cleared audioPlaying field in Firebase.");
+      } else {
+        Serial.println("Failed to clear audioPlaying field in Firebase: " + fbdo.errorReason());
+      }
+    }
   }
 
   // Delay between readings!
