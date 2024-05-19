@@ -32,7 +32,7 @@ bool signupOK = false;
 
 // Variables
 String currentAudio = "";
-String lastAudio = "";
+String lastAudio = "None";
 unsigned int playIndex = -1;
 
 void setup() {
@@ -119,8 +119,8 @@ void loop() {
     }
   }
 
-  // Play new audio if it's different from the last audio played
-  if (currentAudio != lastAudio) {
+  // Play audio
+  if (currentAudio != lastAudio) {  // Play if different from last audio playing
     if (playIndex > 0) {
       Serial.print("Playing audio index: ");
       Serial.println(playIndex);
@@ -128,7 +128,6 @@ void loop() {
     }
     lastAudio = currentAudio;
   }
-
 
   delay(1000);  // Delay between readings
 }

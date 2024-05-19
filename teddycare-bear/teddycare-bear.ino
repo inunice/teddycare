@@ -8,6 +8,11 @@
 // Time
 #include "time.h"
 
+// Audio
+#include "DFRobotDFPlayerMini.h"
+#define FPSerial Serial1
+DFRobotDFPlayerMini myDFPlayer;
+
 // Define pins
 #define SOUND_SENSOR_PIN 35
 
@@ -17,8 +22,8 @@
 #define SOUND_COOLDOWN 60000                // Gap between crying readings (60000 = 1 minute)
 
 // Network credentials
-#define WIFI_SSID "dcs-erdt"
-#define WIFI_PASSWORD "W1F14students"
+#define WIFI_SSID "NEW"
+#define WIFI_PASSWORD "darksideofthedarkvader"
 
 // Firebase credentials
 #define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
@@ -38,10 +43,15 @@ const char* ntpServer = "time.nist.gov";
 const long  gmtOffset_sec = 28800; // GMT+8
 const int   daylightOffset_sec = 0;
 
-// Variables
+// Variables for sound sensor
 unsigned int isCrying = 0;
 unsigned int cryingCoolDown = SOUND_COOLDOWN;
 char timeStr[30];
+
+// Variables for playing audio
+String currentAudio = "";
+String lastAudio = "None";
+unsigned int playIndex = -1;
 
 void printLocalTime() {
   struct tm timeinfo;
@@ -65,6 +75,9 @@ void getTimeString(char* timeString) {
 
 void setup() {
   
+  // Initialize sound
+  FPSerial.begin(9600, SERIAL_8N1, /*rx =*/27, /*tx =*/26);   // Start sound player
+
   // Initialize serial communication
   Serial.begin(115200);
 
@@ -98,6 +111,19 @@ void setup() {
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 
+  // Sound
+  Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
+  
+  if (!myDFPlayer.begin(FPSerial, /*isACK = */true, /*doReset = */true)) {
+    Serial.println(F("Unable to begin:"));
+    Serial.println(F("1.Please recheck the connection!"));
+    Serial.println(F("2.Please insert the SD card!"));
+    while(true){
+      delay(0);
+    }
+  }
+  Serial.println(F("DFPlayer Mini online."));
+  
   // Pins for sensors and output
   pinMode(SOUND_SENSOR_PIN, INPUT);
 
@@ -131,9 +157,10 @@ void loop() {
   // Serial.println(isCrying);
 
   // Firebase
-  // Store to database ONLY if crying is 1 and not on cooldown
-  if ((isCrying == 1) && (cryingCoolDown == SOUND_COOLDOWN)) {
-    if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)){
+  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)){
+    
+    // Store to database ONLY if crying is 1 and not on cooldown
+    if ((isCrying == 1) && (cryingCoolDown == SOUND_COOLDOWN)) {
       sendDataPrevMillis = millis();    // send every second
       Serial.println("Ready to send to database.");
     
@@ -157,6 +184,30 @@ void loop() {
         Serial.println("FAILED: " + fbdo.errorReason());
       }
     }
+
+    // Read audio to play
+    Serial.println("Ready to read from the database.");
+    if (Firebase.RTDB.getString(&fbdo, "/speaker/audioPlaying")) {
+      if (fbdo.dataType() == "string") {
+        currentAudio = fbdo.stringData();
+        Serial.print("The current audio playing is: ");
+        Serial.print(currentAudio);
+        Serial.println();
+      }
+    } else {
+      Serial.println("FAILED: " + fbdo.errorReason());
+    }
+
+    // Find index based on audio to play
+    if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby.wav") {
+      playIndex = 3;
+    } else if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby2.wav") {
+      playIndex = 4;
+    } else if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby3.wav") {
+      playIndex = 5;
+    } else {
+      playIndex = 0; // No audio playing!
+    }
   }
 
   // Decrease cooldown if baby is crying
@@ -171,6 +222,16 @@ void loop() {
     Serial.println("Cooldown is done! We will enable sound detection again.");
     cryingCoolDown = SOUND_COOLDOWN;
     isCrying = 0;
+  }
+
+  // Play audio
+  if (currentAudio != lastAudio) {  // Play if different from last audio playing
+    if (playIndex > 0) {
+      Serial.print("Playing audio index: ");
+      Serial.println(playIndex);
+      myDFPlayer.play(playIndex);  // Play file
+    }
+    lastAudio = currentAudio;
   }
 
   // Delay between readings!
