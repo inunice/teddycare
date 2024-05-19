@@ -38,6 +38,11 @@ FirebaseConfig config;
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 
+// Pending variables to retry failed sends to Firebase
+bool sendIsCryingPending = true;
+bool sendStartTimePending = true;
+bool clearAudioPlayingPending = true;
+
 // Time
 const char* ntpServer = "time.nist.gov";
 const long  gmtOffset_sec = 28800; // GMT+8
@@ -158,31 +163,39 @@ void loop() {
   // Serial.println(isCrying);
 
   // Firebase
-  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)){
-    
-    // Store to database ONLY if crying is 1 and not on cooldown
-    if ((isCrying == 1) && (cryingCoolDown == SOUND_COOLDOWN)) {
+  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
+    // Store to database ONLY if crying is 1 and not pending
+    if ((isCrying == 1)) {
       sendDataPrevMillis = millis();    // send every second
       Serial.println("Ready to send to database.");
     
-      if (Firebase.RTDB.setInt(&fbdo, "/soundSensor/isCrying", isCrying)) {
-        Serial.println();
-        Serial.print(isCrying);
-        Serial.print(" - successfully saved to: " + fbdo.dataPath());
-        Serial.println(" (" + fbdo.dataType() + ") ");
-      } else {
-        Serial.println("FAILED: " + fbdo.errorReason());
+      // Send isCrying status
+      if (sendIsCryingPending) {
+        if (Firebase.RTDB.setInt(&fbdo, "/soundSensor/isCrying", isCrying)) {
+          Serial.println();
+          Serial.print(isCrying);
+          Serial.print(" - successfully saved to: " + fbdo.dataPath());
+          Serial.println(" (" + fbdo.dataType() + ") ");
+          sendIsCryingPending = false;
+        } else {
+          Serial.println("FAILED: " + fbdo.errorReason());
+          sendIsCryingPending = true;
+        }
       }
 
-      // Store the time of crying to database
-      getTimeString(timeStr);
-      if (Firebase.RTDB.setString(&fbdo, "/soundSensor/startTime", timeStr)) {
-        Serial.println();
-        Serial.print(timeStr);
-        Serial.print(" - successfully saved to: " + fbdo.dataPath());
-        Serial.println(" (" + fbdo.dataType() + ") ");
-      } else {
-        Serial.println("FAILED: " + fbdo.errorReason());
+      // Send start time
+      if (sendStartTimePending) {
+        getTimeString(timeStr);
+        if (Firebase.RTDB.setString(&fbdo, "/soundSensor/startTime", timeStr)) {
+          Serial.println();
+          Serial.print(timeStr);
+          Serial.print(" - successfully saved to: " + fbdo.dataPath());
+          Serial.println(" (" + fbdo.dataType() + ") ");
+          sendStartTimePending = false;
+        } else {
+          Serial.println("FAILED: " + fbdo.errorReason());
+          sendStartTimePending = true;
+        }
       }
     }
 
@@ -244,10 +257,14 @@ void loop() {
       currentAudio = "";  // Reset current audio
 
       // Clear the audioPlaying field in Firebase
-      if (Firebase.RTDB.setString(&fbdo, "/speaker/audioPlaying", "0")) {
-        Serial.println("Cleared audioPlaying field in Firebase.");
-      } else {
-        Serial.println("Failed to clear audioPlaying field in Firebase: " + fbdo.errorReason());
+      if (clearAudioPlayingPending) {
+        if (Firebase.RTDB.setString(&fbdo, "/speaker/audioPlaying", "0")) {
+          Serial.println("Cleared audioPlaying field in Firebase.");
+          clearAudioPlayingPending = false;
+        } else {
+          Serial.println("Failed to clear audioPlaying field in Firebase: " + fbdo.errorReason());
+          clearAudioPlayingPending = true;
+        }
       }
     }
   }
