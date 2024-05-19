@@ -8,6 +8,11 @@
 // // Time
 // #include "time.h"
 
+// Audio
+#include "DFRobotDFPlayerMini.h"
+#define FPSerial Serial1
+DFRobotDFPlayerMini myDFPlayer;
+
 // Network credentials
 #define WIFI_SSID "NEW"
 #define WIFI_PASSWORD "darksideofthedarkvader"
@@ -26,10 +31,16 @@ unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 
 // Variables
-String stringValue = "";
+String currentAudio = "";
+String lastAudio = "";
+unsigned int playIndex = -1;
 
 void setup() {
   // put your setup code here, to run once:
+
+  // Initialize sound
+  FPSerial.begin(9600, SERIAL_8N1, /*rx =*/27, /*tx =*/26);   // Start sound player
+
   // Initialize serial communication
   Serial.begin(115200);
 
@@ -63,6 +74,19 @@ void setup() {
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 
+  // Sound
+  Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
+  
+  if (!myDFPlayer.begin(FPSerial, /*isACK = */true, /*doReset = */true)) {
+    Serial.println(F("Unable to begin:"));
+    Serial.println(F("1.Please recheck the connection!"));
+    Serial.println(F("2.Please insert the SD card!"));
+    while(true){
+      delay(0);
+    }
+  }
+  Serial.println(F("DFPlayer Mini online."));
+
   Serial.println("Setup complete!");
 }
 
@@ -74,15 +98,37 @@ void loop() {
 
     if (Firebase.RTDB.getString(&fbdo, "/speaker/audioPlaying")) {
       if (fbdo.dataType() == "string") {
-        stringValue = fbdo.stringData();
+        currentAudio = fbdo.stringData();
         Serial.print("The current audio playing is: ");
-        Serial.print(stringValue);
+        Serial.print(currentAudio);
         Serial.println();
       }
     } else {
       Serial.println("FAILED: " + fbdo.errorReason());
     }
+
+        // Find index based on audio to play
+    if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby.wav") {
+      playIndex = 3;
+    } else if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby2.wav") {
+      playIndex = 4;
+    } else if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby3.wav") {
+      playIndex = 5;
+    } else {
+      playIndex = 0; // No audio playing!
+    }
   }
+
+  // Play new audio if it's different from the last audio played
+  if (currentAudio != lastAudio) {
+    if (playIndex > 0) {
+      Serial.print("Playing audio index: ");
+      Serial.println(playIndex);
+      myDFPlayer.play(playIndex);  // Play file
+    }
+    lastAudio = currentAudio;
+  }
+
 
   delay(1000);  // Delay between readings
 }
