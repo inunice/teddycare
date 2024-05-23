@@ -1,25 +1,6 @@
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
-'''
-import random
-def generate_sample_data(length, seed):
-    random.seed(seed)
-    heartbeat = []
-    value = random.randint(-50, 50)
-    increasing = True
-    for _ in range(length):
-        change = random.random() * random.randint(5, 20)
-        if random.random() > 0.75:
-            increasing = not increasing
-        if not increasing:
-            change *= -1
-        value += change 
-        heartbeat.append(value)
-
-    return heartbeat
-'''
-
 
 def get_changepoints(beat):
     beat_x = [x for (x, _) in beat]
@@ -40,7 +21,7 @@ def get_changepoints(beat):
     #         changepoints.append((beat_x[i - 1], beat_y[i - 1]))
     # return changepoints
 
-def get_average(beat):
+def get_bpm(beat):
     slice = beat[50: 50 + 60]
     num_changepoints = len(get_changepoints(slice))
     return num_changepoints / 60
@@ -59,8 +40,8 @@ if __name__ == "__main__":
     change_y = [y for (_, y) in changepoints]
 
     '''
-    average = get_average(test)
-    print(average)
+    bpm = get_bpm(test)
+    print(bpm)
     '''
 
     plt.plot(test_x, test_y)

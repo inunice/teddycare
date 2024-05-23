@@ -1,32 +1,35 @@
-import threading
-from google.cloud import firestore
+from time import sleep
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
+from beat_sample import get_bpm, get_changepoints
 
-def listen_document():
-    db = firestore.Client()
-    # Create an Event for notifying main thread.
-    callback_done = threading.Event()
+cred = credentials.Certificate('path/to/serviceKey')
 
-    # Create a callback on_snapshot function to capture changes
-    def on_snapshot(doc_snapshot, changes, read_time):
-        for doc in doc_snapshot:
-            print(f"Received document snapshot: {doc.id}")
-        #call preprocessing
-        callback_done.set()
+# Initialize the app with a service account, granting admin privileges
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/'
+})
 
-    doc_ref = db.collection("cities").document("SF")
+# As an admin, the app has access to read and write all data, regradless of Security Rules
+while True:
+    ref = db.reference('heartbeat_data')
+    rec_ref = ref.child('recordings')
+    is_recording = ref.child('is_recording').get()
+    recordings = rec_ref.get()
+    if not is_recording and len(recordings) == 30:
+        recording_list = []
+        for recording in recordings.values():
+            recording_list.extend(recording)
+        recording_list.sort(key = lambda pair: pair[0])
+        # preprocess
+        ref.update({
+            'preprocessed_heartbeat': {
+                'frequency': get_bpm(recording_list),
+                'peaks': get_changepoints(recording_list),
+                }
+            })
+    sleep(60)
 
-    # Watch the document
-    doc_watch = doc_ref.on_snapshot(on_snapshot)
 
-    # Creating document
-    data = {
-        "average": average,
-        "values": values,
-    }
-    doc_ref.set(data)
-    # Wait for the callback.
-    callback_done.wait(timeout=60)
-    # [START firestore_listen_detach]
-    # Terminate watch on a document
-    doc_watch.unsubscribe()
-    # [END firestore_listen_detach]
+
