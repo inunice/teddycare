@@ -4,7 +4,7 @@ from firebase_admin import credentials
 from firebase_admin import db
 from beat_sample import get_bpm, get_changepoints
 
-cred = credentials.Certificate('path/to/serviceKey')
+cred = credentials.Certificate('test1-a4e94-firebase-adminsdk-mv0uj-28a74beeb8.json')
 
 # Initialize the app with a service account, granting admin privileges
 firebase_admin.initialize_app(cred, {
@@ -12,12 +12,12 @@ firebase_admin.initialize_app(cred, {
 })
 
 # As an admin, the app has access to read and write all data, regradless of Security Rules
+ref = db.reference('heartbeat_data')
 while True:
-    ref = db.reference('heartbeat_data')
     rec_ref = ref.child('recordings')
     is_recording = ref.child('is_recording').get()
     recordings = rec_ref.get()
-    if not is_recording and len(recordings) == 30:
+    if not is_recording and recordings != None and len(recordings) == 2:
         recording_list = []
         for recording in recordings.values():
             recording_list.extend(recording)
@@ -29,6 +29,7 @@ while True:
                 'peaks': get_changepoints(recording_list),
                 }
             })
+        ref.update({'recordings': None})
     sleep(60)
 
 
