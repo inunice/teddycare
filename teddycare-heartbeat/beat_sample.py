@@ -22,9 +22,8 @@ def get_changepoints(beat):
     # return changepoints
 
 def get_bpm(beat):
-    slice = beat[50: 50 + 60]
-    num_changepoints = len(get_changepoints(slice))
-    return num_changepoints / 60
+    num_changepoints = len(get_changepoints(beat))
+    return num_changepoints * 2
 
 if __name__ == "__main__":
     test = []
