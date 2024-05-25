@@ -5,11 +5,12 @@ import numpy as np
 def get_changepoints(beat):
     timestamps = [x for (x, _) in beat]
     values = np.array([y for (_, y) in beat])
+
     # normalize values
     max_val = values.max()
     values /= max_val
     
-    peaks, _ = find_peaks(values, threshold = 100)
+    peaks, _ = find_peaks(values, threshold = 0.7)
     peaks = list(peaks)
     
     return [(timestamps[i], values[i]) for i in sorted(peaks)]
