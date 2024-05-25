@@ -4,7 +4,7 @@ from firebase_admin import credentials
 from firebase_admin import db
 from beat_sample import get_bpm, get_changepoints
 
-cred = credentials.Certificate('path/to/serviceKey.json')
+cred = credentials.Certificate('test1-a4e94-firebase-adminsdk-mv0uj-28a74beeb8.json')
 
 # Initialize the app with a service account, granting admin privileges
 firebase_admin.initialize_app(cred, {
@@ -17,7 +17,7 @@ while True:
     rec_ref = ref.child('recordings')
     is_recording = ref.child('is_recording').get()
     recordings = rec_ref.get()
-    if not is_recording and recordings != None and len(recordings) == 30:
+    if not is_recording and recordings != None and len(recordings) > 0:
         recording_list = []
         for recording in recordings.values():
             recording_list.extend(recording)

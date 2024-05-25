@@ -3,15 +3,13 @@ import matplotlib.pyplot as plt
 
 
 def get_changepoints(beat):
-    beat_x = [x for (x, _) in beat]
-    beat_y = [y for (_, y) in beat]
-    n_beat_y = [-y for y in beat_y]
+    timestamps = [x for (x, _) in beat]
+    values = [y for (_, y) in beat]
     
-    peaks, _ = find_peaks(beat_y, threshold = 100)
-    troughs, _ = find_peaks(n_beat_y, threshold = 100)
-    peaks, troughs = list(peaks), list(troughs)
+    peaks, _ = find_peaks(values, threshold = 100)
+    peaks = list(peaks)
     
-    return [(beat_x[i], beat_y[i]) for i in sorted(peaks + troughs)]
+    return [(timestamps[i], values[i]) for i in sorted(peaks)]
 
     # changepoints = []
     # increasing = beat_y[0] < beat_y[1] 
