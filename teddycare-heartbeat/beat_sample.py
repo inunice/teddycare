@@ -1,10 +1,13 @@
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
-
+import numpy as np
 
 def get_changepoints(beat):
     timestamps = [x for (x, _) in beat]
-    values = [y for (_, y) in beat]
+    values = np.array([y for (_, y) in beat])
+    # normalize values
+    max_val = values.max()
+    values /= max_val
     
     peaks, _ = find_peaks(values, threshold = 100)
     peaks = list(peaks)
