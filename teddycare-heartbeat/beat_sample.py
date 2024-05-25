@@ -2,15 +2,16 @@ from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 import numpy as np
 
-def get_peaks(beat_pairs):
+def get_peaks(beat_pairs, normal = False):
     timestamps = [pair['from_start_device_time'] for pair in beat_pairs]
     values = np.array([pair['ir_value'] for pair in beat_pairs], dtype = 'float64')
 
-    '''
     # normalize values
-    max_val = values.max()
-    values /= max_val
-    '''
+    if normal:
+        max_val = values.max()
+        values /= max_val
+        values *= 255
+
     # TODO: need to fix parameters 
     peaks, _ = find_peaks(values)
     peaks = list(peaks)

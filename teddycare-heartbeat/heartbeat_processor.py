@@ -19,26 +19,31 @@ while True:
     recordings = rec_ref.get()
     
     #test
+    '''
     recording_list = []
     for recording in recordings.values():
         recording_list.extend(recording[:-1])
-
     break
+    '''
+
     if is_recording == '0' and recordings != None and len(recordings) > 0:
         recording_list = []
         for recording in recordings.values():
-            recording_list.extend(recording)
+            recording_list.extend(recording[:-1])
         # preprocess
         ref.update({
             'preprocessed_heartbeat': {
                 'frequency': get_bpm(recording_list),
-                'peaks': get_peaks(recording_list),
+                'peaks': get_peaks(recording_list, normal = True),
                 }
             })
+        # remove recordings
         # ref.update({'recordings': None})
         print('processed')
     sleep(60)
 
+# testing
+'''
 import matplotlib.pyplot as plt
 beats = recording_list
 beats_x = [pair['from_start_device_time'] for pair in beats]
@@ -58,5 +63,5 @@ plt.title('Heartbeat Data')
 plt.xlabel('Time')
 plt.ylabel('Value')
 plt.show()
-
+'''
 
