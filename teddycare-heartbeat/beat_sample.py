@@ -2,30 +2,30 @@ from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 import numpy as np
 
-def get_changepoints(beat):
-    timestamps = [x for (x, _) in beat]
-    values = np.array([y for (_, y) in beat])
+def get_peaks(beat_pairs):
+    timestamps = [pair['from_start_device_time'] for pair in beat_pairs]
+    values = np.array([pair['ir_value'] for pair in beat_pairs], dtype = 'float64')
 
     # normalize values
     max_val = values.max()
     values /= max_val
     
-    peaks, _ = find_peaks(values, threshold = 0.7)
+    peaks, _ = find_peaks(values)
     peaks = list(peaks)
     
-    return [(timestamps[i], values[i]) for i in sorted(peaks)]
+    return [{'from_start_device_time': timestamps[i], 'ir_value': values[i]} for i in peaks]
 
     # changepoints = []
-    # increasing = beat_y[0] < beat_y[1] 
-    # for i in range(1, len(beat)):
-    #     if increasing and beat_y[i - 1] > beat_y[i] or not increasing and beat_y[i - 1] < beat_y[i]:
+    # increasing = beat_pairs_y[0] < beat_pairs_y[1] 
+    # for i in range(1, len(beat_pairs)):
+    #     if increasing and values[i - 1] > values[i] or not increasing and values[i - 1] < values[i]:
     #         increasing = not increasing
-    #         changepoints.append((beat_x[i - 1], beat_y[i - 1]))
+    #         changepoints.append((timestamps[i - 1], values[i - 1]))
     # return changepoints
 
-def get_bpm(beat):
-    num_changepoints = len(get_changepoints(beat))
-    return num_changepoints * 2
+def get_bpm(beat_pairs):
+    num_peaks = len(get_peaks(beat_pairs))
+    return num_peaks * 2
 
 if __name__ == "__main__":
     test = []
