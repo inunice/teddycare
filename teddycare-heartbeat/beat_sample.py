@@ -6,10 +6,12 @@ def get_peaks(beat_pairs):
     timestamps = [pair['from_start_device_time'] for pair in beat_pairs]
     values = np.array([pair['ir_value'] for pair in beat_pairs], dtype = 'float64')
 
+    '''
     # normalize values
     max_val = values.max()
     values /= max_val
-    
+    '''
+    # TODO: need to fix parameters 
     peaks, _ = find_peaks(values)
     peaks = list(peaks)
     

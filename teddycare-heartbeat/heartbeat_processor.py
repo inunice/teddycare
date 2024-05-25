@@ -21,7 +21,7 @@ while True:
     #test
     recording_list = []
     for recording in recordings.values():
-        recording_list.extend(recording)
+        recording_list.extend(recording[:-1])
 
     break
     if is_recording == '0' and recordings != None and len(recordings) > 0:
@@ -37,7 +37,6 @@ while True:
             })
         # ref.update({'recordings': None})
         print('processed')
-    break
     sleep(60)
 
 import matplotlib.pyplot as plt
@@ -46,16 +45,15 @@ beats_x = [pair['from_start_device_time'] for pair in beats]
 beats_y = [pair['ir_value'] for pair in beats]
 print(beats_x)
 print(beats_y)
-'''
+
 peaks = get_peaks(beats)
 peaks_x = [pair['from_start_device_time'] for pair in peaks]
 peaks_y = [pair['ir_value'] for pair in peaks]
 print(peaks_x)
 print(peaks_y)
-'''
 
 plt.plot(beats_x, beats_y)
-# plt.scatter(peaks_x, peaks_y)
+plt.scatter(peaks_x, peaks_y)
 plt.title('Heartbeat Data')
 plt.xlabel('Time')
 plt.ylabel('Value')
