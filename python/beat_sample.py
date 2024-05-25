@@ -1,6 +1,7 @@
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 import numpy as np
+from math import ceil
 
 def get_peaks(beat_pairs, normal = False):
     timestamps = [pair['from_start_device_time'] for pair in beat_pairs]
@@ -11,6 +12,7 @@ def get_peaks(beat_pairs, normal = False):
         max_val = values.max()
         values /= max_val
         values *= 255
+        values = list(map(ceil, values))
 
     # TODO: need to fix parameters 
     peaks, _ = find_peaks(values)
@@ -31,26 +33,27 @@ def get_bpm(beat_pairs):
     return num_peaks * 2
 
 if __name__ == "__main__":
-    test = []
+    beats = [{'from_start_device_time': pair[0], 'ir_value': pair[1]} for pair in [(1, 300), (2, 400), (3, 500), (4, 350)]]
+    '''
     with open("coolterm1.csv") as f:
         for line in f:
             line = list(map(int, line.split(",")))
-            test.append(line)
-    test_x = [x for (x, _) in test]
-    test_y = [y for (_, y) in test]
-
-    changepoints = get_changepoints(test)
-    change_x = [x for (x, _) in changepoints]
-    change_y = [y for (_, y) in changepoints]
-
+            beats.append(line)
     '''
-    bpm = get_bpm(test)
-    print(bpm)
-    '''
+    beats_x = [pair['from_start_device_time'] for pair in beats]
+    beats_y = [pair['ir_value'] for pair in beats]
+    print(beats_x)
+    print(beats_y)
 
-    plt.plot(test_x, test_y)
-    plt.scatter(change_x, change_y)
-    plt.title('Sample Data')
+    peaks = get_peaks(beats, normal = True)
+    peaks_x = [pair['from_start_device_time'] for pair in peaks]
+    peaks_y = [pair['ir_value'] for pair in peaks]
+    print(peaks_x)
+    print(peaks_y)
+
+    plt.plot(beats_x, beats_y)
+    plt.scatter(peaks_x, peaks_y)
+    plt.title('Heartbeat Data')
     plt.xlabel('Time')
     plt.ylabel('Value')
     plt.show()
