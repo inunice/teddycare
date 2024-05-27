@@ -3,22 +3,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 from math import ceil
 
+def normalize(y, old_min, old_max, new_min = 150, new_max = 255):
+    a = (new_max - new_min) / (old_max - old_min)
+    b = new_max - a * old_max
+    return ceil(a * y + b)
+
 def get_peaks(beat_pairs, normal = False):
     timestamps = [pair['from_start_device_time'] for pair in beat_pairs]
-    values = np.array([pair['ir_value'] for pair in beat_pairs], dtype = 'float64')
+    values = [pair['ir_value'] for pair in beat_pairs]
 
     # normalize values
-    if normal:
-        max_val = values.max()
-        values /= max_val
-        values *= 255
-        values = list(map(ceil, values))
 
     # TODO: need to fix parameters 
-    peaks, _ = find_peaks(values)
-    peaks = list(peaks)
+    peaks, _ = find_peaks(values, distance = 10)
+    # peaks = list(peaks)
+    if normal:
+        max_val = max(values[i] for i in peaks)
+        min_val = min(values[i] for i in peaks)
+        return [{'from_start_device_time': timestamps[i], 'ir_value': normalize(values[i], min_val, max_val)} for i in peaks]
+    else:
+        return [{'from_start_device_time': timestamps[i], 'ir_value': values[i]} for i in peaks]
+
     
-    return [{'from_start_device_time': timestamps[i], 'ir_value': values[i]} for i in peaks]
 
     # changepoints = []
     # increasing = beat_pairs_y[0] < beat_pairs_y[1] 
