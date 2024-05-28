@@ -6,7 +6,7 @@ from math import ceil
 def normalize(y, old_min, old_max, new_min = 150, new_max = 255):
     a = (new_max - new_min) / (old_max - old_min)
     b = new_max - a * old_max
-    return ceil(a * y + b)
+    return min(max(ceil(a * y + b), new_min), 255)
 
 def get_peaks(beat_pairs, normal = False):
     timestamps = [pair['from_start_device_time'] for pair in beat_pairs]
