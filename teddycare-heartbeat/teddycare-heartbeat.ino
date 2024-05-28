@@ -15,8 +15,8 @@
 #include "time.h"
 
 // Network credentials
-#define WIFI_SSID "GlobeAtHome_8A984_2.4"
-#define WIFI_PASSWORD "MCm7fGGY"
+// #define WIFI_SSID "GlobeAtHome_8A984_2.4"
+// #define WIFI_PASSWORD "MCm7fGGY"
 #define WIFI_SSID "SILVER"
 #define WIFI_PASSWORD "dy3fao123"
 // #define WIFI_SSID "dcs-students2"
