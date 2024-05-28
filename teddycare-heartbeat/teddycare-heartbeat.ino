@@ -15,17 +15,19 @@
 #include "time.h"
 
 // Network credentials
-// #define WIFI_SSID "GlobeAtHome_8A984_2.4"
-// #define WIFI_PASSWORD "MCm7fGGY"
+#define WIFI_SSID "GlobeAtHome_8A984_2.4"
+#define WIFI_PASSWORD "MCm7fGGY"
+#define WIFI_SSID "SILVER"
+#define WIFI_PASSWORD "dy3fao123"
 // #define WIFI_SSID "dcs-students2"
 // #define WIFI_PASSWORD "W1F14students"
-#define WIFI_SSID "ENGG-Student-WiFi"
-#define WIFI_PASSWORD "c03l1br@ry"
+// #define WIFI_SSID "ENGG-Student-WiFi"
+// #define WIFI_PASSWORD "c03l1br@ry"
 // Firebase credentials
-// #define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
-// #define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
-#define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
-#define DATABASE_URL "https://teddycare-12aaf-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+#define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
+#define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+// #define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
+// #define DATABASE_URL "https://teddycare-12aaf-default-rtdb.asia-southeast1.firebasedatabase.app/" 
 // Firebase
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -45,7 +47,7 @@ typedef struct tuple {
 
 #include <bits/stdc++.h>
 
-#define BUFFER_MAX_LEN 20 // must be changed since malalaking values nga naman
+#define BUFFER_MAX_LEN 20// must be changed since malalaking values nga naman
 
 typedef struct RingBuffer {
     int i; // index to insert item
@@ -85,7 +87,7 @@ RingBuffer subset;
 int PULSE_RECORD_TIME_DURATION = 30000;
 FirebaseJsonArray json_array;
 char db_path[50]; // for the path of the data in the database
-int batch = 0;
+int batch = 100;
 String isRecording;
 // hardware
 MAX30105 particleSensor;
@@ -182,7 +184,7 @@ void loop(){
   // // replace their time values from [latest time] to [latest time + k] where k is the number of slots remaining in the buffer from the previous buffer iteration
   // 
   
-  if (Firebase.RTDB.getString(&fbdo, "/heartbeat_data/is_recording")) {
+  if (Firebase.RTDB.getString(&fbdo, "/heartbeat_data/is_recording/")) {
     if (fbdo.dataType() == "string") {
       isRecording = fbdo.stringData();
       Serial.println("The isRecording value is " + isRecording);
@@ -203,10 +205,12 @@ void loop(){
       duration = millis() - startTime;
       tuple new_tuple;
       new_tuple.from_start_device_time = duration;
-      new_tuple.ir_value = reading;
+      new_tuple.ir_value = reading - 90000 ; // for scaling
+      Serial.println(new_tuple.ir_value);
 
-      if(reading > 90000 && insert_ring_buffer(&subset, new_tuple) ) { 
+      if(90000 < reading < 200000 && insert_ring_buffer(&subset, new_tuple) ) { 
         // send to firebase
+        // print_ring_buffer(&subset);
         if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
           sendDataPrevMillis = millis();    // send every second
 
@@ -215,11 +219,14 @@ void loop(){
             FirebaseJson data_point;
             data_point.add("from_start_device_time", subset.arr[j].from_start_device_time);
             data_point.add("ir_value", subset.arr[j].ir_value);
+            // Serial.print(subset.arr[j].ir_value + " ");
             json_array.add(data_point);
           }
-
+          Serial.println();
           // push the array to the database in a PATH
-          sprintf(db_path, "/heartbeat_data/recordings/batch%d", batch);
+          // sprintf(db_path, "/heartbeat_data/recordings/batch%d", batch);
+          sprintf(db_path, "/heartbeat_data/recordings/");
+          //sprintf(db_path, "/heartbeat_data/scaled/");
           if (Firebase.RTDB.pushArray(&fbdo, db_path, &json_array)) {
             Serial.println("PASSED");
             Serial.println("PATH: " + fbdo.dataPath());
