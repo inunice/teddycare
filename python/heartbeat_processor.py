@@ -15,7 +15,7 @@ def get_troughs(beat_pairs):
     neg_values = [-value for value in values]
 
     # TODO: need to fix parameters 
-    troughs, _ = find_peaks(neg_values, distance = 5)
+    troughs, _ = find_peaks(neg_values, width = 2)
     return [{'from_start_device_time': timestamps[i], 'ir_value': values[i], 'peak': 0} for i in troughs]
 
 def get_peaks(beat_pairs):
@@ -23,7 +23,7 @@ def get_peaks(beat_pairs):
     values = [pair['ir_value'] for pair in beat_pairs]
 
     # TODO: need to fix parameters 
-    peaks, _ = find_peaks(values, distance = 5)
+    peaks, _ = find_peaks(values, distance = 8)
     return [{'from_start_device_time': timestamps[i], 'ir_value': values[i], 'peak': 1} for i in peaks]
 
 def calculate_delays(beat_pairs):
@@ -113,5 +113,5 @@ def test():
     plt.ylabel('Value')
     plt.show()
 
-    preprocess()
+    # preprocess()
 
