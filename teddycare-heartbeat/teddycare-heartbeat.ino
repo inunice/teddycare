@@ -19,13 +19,13 @@
 // #define WIFI_PASSWORD "MCm7fGGY"
 #define WIFI_SSID "SILVER"
 #define WIFI_PASSWORD "dy3fao123"
-// // Network credentials
 // #define WIFI_SSID "DragonsDen"
 // #define WIFI_PASSWORD "iotcup2024fusrodah"
 // #define WIFI_SSID "dcs-students2"
 // #define WIFI_PASSWORD "W1F14students"
 // #define WIFI_SSID "ENGG-Student-WiFi"
 // #define WIFI_PASSWORD "c03l1br@ry"
+
 // Firebase credentials
 // #define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
 // #define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
@@ -50,7 +50,7 @@ typedef struct tuple {
 
 #include <bits/stdc++.h>
 
-#define BUFFER_MAX_LEN 20// must be changed since malalaking values nga naman
+#define BUFFER_MAX_LEN 20 // must be changed since malalaking values nga naman
 
 typedef struct RingBuffer {
     int i; // index to insert item
@@ -160,10 +160,10 @@ void setup(){
 
   particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange); //Configure sensor with these settings
 
-  //Arduino plotter auto-scales annoyingly. To get around this, pre-populate
-  //the plotter with 500 of an average reading from the sensor
+  // Arduino plotter auto-scales annoyingly. To get around this, pre-populate
+  // The plotter with 500 of an average reading from the sensor
 
-  //Take an average of IR readings at power up
+  // Take an average of IR readings at power up
 
   Serial.println("Powering up the sensor...");
 
@@ -314,20 +314,6 @@ void loop(){
       Serial.println("REASON: " + fbdo.errorReason());
     }
   }
-
-  // set is_uploading == 
-
-  // ano ba dapat value ito.
-  // if (Firebase.RTDB.setInt(&fbdo, "/heartbeat_data/is_uploading", 1)){
-  //   Serial.println("PASSED");
-  //   Serial.println("PATH: " + fbdo.dataPath());
-  //   Serial.println("TYPE: " + fbdo.dataType());
-  //   Serial.println("isUploading set to 1");
-  // }
-  // else {
-  //   Serial.println("FAILED");
-  //   Serial.println("REASON: " + fbdo.errorReason());
-  // }
 }
 
 /*
