@@ -197,7 +197,7 @@ void loop(){
   if (Firebase.RTDB.getInt(&fbdo, "/soundSensor/isCrying/")) {
     if (fbdo.dataType() == "int") {
       isCrying = fbdo.intData();
-      Serial.println("The isCrying value is " + isCrying);
+      // Serial.println("The isCrying value is " + isCrying);
     }
   }
   else {
@@ -215,7 +215,8 @@ void loop(){
   if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_recording/")) {
     if (fbdo.dataType() == "int") {
       isRecording = fbdo.intData();
-      Serial.println("The isRecording value is " + isRecording);
+      Serial.print("The isRecording value is ");
+      Serial.println(isRecording);
     }
   }
   else {
