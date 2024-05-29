@@ -17,17 +17,20 @@
 // Network credentials
 // #define WIFI_SSID "GlobeAtHome_8A984_2.4"
 // #define WIFI_PASSWORD "MCm7fGGY"
-#define WIFI_SSID "SILVER"
-#define WIFI_PASSWORD "dy3fao123"
+// #define WIFI_SSID "SILVER"
+// #define WIFI_PASSWORD "dy3fao123"
+// Network credentials
+#define WIFI_SSID "DragonsDen"
+#define WIFI_PASSWORD "iotcup2024fusrodah"
 // #define WIFI_SSID "dcs-students2"
 // #define WIFI_PASSWORD "W1F14students"
 // #define WIFI_SSID "ENGG-Student-WiFi"
 // #define WIFI_PASSWORD "c03l1br@ry"
 // Firebase credentials
-#define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
-#define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
-// #define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
-// #define DATABASE_URL "https://teddycare-12aaf-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+// #define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
+// #define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+#define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
+#define DATABASE_URL "https://teddycare-12aaf-default-rtdb.asia-southeast1.firebasedatabase.app/" 
 // Firebase
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -195,7 +198,7 @@ void loop(){
     Serial.println("Can't Fetch isRecording " + fbdo.errorReason());
   }
   int reading = particleSensor.getIR();
-  if (isRecording == "1" && reading > 90000) {
+  if (isRecording == 1 && reading > 90000) {
     Serial.println("Starting Recording");
     unsigned long startTime = millis();    
     int duration = 0;
@@ -278,7 +281,7 @@ void loop(){
     // mark stop uploading to REALTIMEBATABASE
     if (Firebase.RTDB.setInt(&fbdo, "/heartbeat_data/is_uploading", 0)){
       Serial.println("PASSED");
-      Serial.println("PATH: " + fbdo.dataPath());s
+      Serial.println("PATH: " + fbdo.dataPath());
       Serial.println("TYPE: " + fbdo.dataType());
       Serial.println("isUploading set to 0");
     }

@@ -22,8 +22,8 @@ DFRobotDFPlayerMini myDFPlayer;
 #define SOUND_COOLDOWN 60000                // Gap between crying readings (60000 = 1 minute)
 
 // Network credentials
-#define WIFI_SSID "NEW"
-#define WIFI_PASSWORD "darksideofthedarkvader"
+#define WIFI_SSID "DragonsDen"
+#define WIFI_PASSWORD "iotcup2024fusrodah"
 
 // Firebase credentials
 #define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
@@ -58,6 +58,7 @@ String currentAudio = "";
 String lastAudio = "None";
 unsigned int playIndex = -1;
 bool audioFinished = false;
+unsigned int volume = 15;
 
 void printLocalTime() {
   struct tm timeinfo;
@@ -147,7 +148,7 @@ void loop() {
   // Detect if crying for 5 seconds
   while ((millis() - startTime < SOUND_WINDOW_DURATION) && (cryingCoolDown == SOUND_COOLDOWN)) {
     int soundValue = analogRead(SOUND_SENSOR_PIN);   // Read value from sensor
-    // Serial.println(soundValue);
+    Serial.println(soundValue);
     if (soundValue > SOUND_THRESHOLD) {
       isCrying = 1;
       Serial.println("Baby is crying!");
@@ -212,6 +213,19 @@ void loop() {
       Serial.println("FAILED: " + fbdo.errorReason());
     }
 
+    // Read audio to play
+    Serial.println("Ready to read from the database.");
+    if (Firebase.RTDB.getString(&fbdo, "/speaker/volume")) {
+      if (fbdo.dataType() == "int") {
+        volume = fbdo.intData();
+        Serial.print("The current volume playing is: ");
+        Serial.print(volume);
+        Serial.println();
+      }
+    } else {
+      Serial.println("FAILED: " + fbdo.errorReason());
+    }
+
     // Find index based on audio to play
     if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby.wav") {
       playIndex = 3;
@@ -238,6 +252,8 @@ void loop() {
     isCrying = 0;
   }
 
+  myDFPlayer.volume(volume);
+  
   // Play audio
   if (currentAudio != lastAudio) {  // Play if different from last audio playing
     if (playIndex > 0) {
