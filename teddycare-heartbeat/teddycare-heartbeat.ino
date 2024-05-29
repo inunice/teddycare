@@ -88,7 +88,8 @@ int PULSE_RECORD_TIME_DURATION = 30000;
 FirebaseJsonArray json_array;
 char db_path[50]; // for the path of the data in the database
 int batch = 100;
-String isRecording;
+int isRecording = 0;
+int is_uploading = 0;
 // hardware
 MAX30105 particleSensor;
 
@@ -184,9 +185,9 @@ void loop(){
   // // replace their time values from [latest time] to [latest time + k] where k is the number of slots remaining in the buffer from the previous buffer iteration
   // 
   
-  if (Firebase.RTDB.getString(&fbdo, "/heartbeat_data/is_recording/")) {
-    if (fbdo.dataType() == "string") {
-      isRecording = fbdo.stringData();
+  if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_recording/")) {
+    if (fbdo.dataType() == "int") {
+      isRecording = fbdo.intData();
       Serial.println("The isRecording value is " + isRecording);
     }
   }
@@ -236,7 +237,20 @@ void loop(){
             Serial.println("FAILED");
             Serial.println("REASON: " + fbdo.errorReason());
           }
-
+          
+          // if is_uploading == 0, then set is_uploading = 1
+          if (is_uploading == 0){
+            if (Firebase.RTDB.setInt(&fbdo, "/heartbeat_data/is_uploading", 1)){
+              Serial.println("PASSED");
+              Serial.println("PATH: " + fbdo.dataPath());
+              Serial.println("TYPE: " + fbdo.dataType());
+              Serial.println("isUploading set to 1");
+            }
+            else {
+              Serial.println("FAILED");
+              Serial.println("REASON: " + fbdo.errorReason());
+            }
+          }
           
           // clear the json array for reuse
           clear_json_array(&json_array);
@@ -249,8 +263,8 @@ void loop(){
     
     }
 
-    isRecording = "0";
-    if (Firebase.RTDB.setString(&fbdo, "/heartbeat_data/is_recording", "0")){
+    isRecording = 0;
+    if (Firebase.RTDB.setInt(&fbdo, "/heartbeat_data/is_recording", 0)){
       Serial.println("PASSED");
       Serial.println("PATH: " + fbdo.dataPath());
       Serial.println("TYPE: " + fbdo.dataType());
@@ -260,7 +274,33 @@ void loop(){
       Serial.println("FAILED");
       Serial.println("REASON: " + fbdo.errorReason());
     }
+
+    // mark stop uploading to REALTIMEBATABASE
+    if (Firebase.RTDB.setInt(&fbdo, "/heartbeat_data/is_uploading", 0)){
+      Serial.println("PASSED");
+      Serial.println("PATH: " + fbdo.dataPath());s
+      Serial.println("TYPE: " + fbdo.dataType());
+      Serial.println("isUploading set to 0");
+    }
+    else {
+      Serial.println("FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
+
+  // set is_uploading == 
+
+  // ano ba dapat value ito.
+  // if (Firebase.RTDB.setInt(&fbdo, "/heartbeat_data/is_uploading", 1)){
+  //   Serial.println("PASSED");
+  //   Serial.println("PATH: " + fbdo.dataPath());
+  //   Serial.println("TYPE: " + fbdo.dataType());
+  //   Serial.println("isUploading set to 1");
+  // }
+  // else {
+  //   Serial.println("FAILED");
+  //   Serial.println("REASON: " + fbdo.errorReason());
+  // }
 }
 
 /*
