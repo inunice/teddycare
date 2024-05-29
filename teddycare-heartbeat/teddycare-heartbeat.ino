@@ -101,7 +101,7 @@ MAX30105 particleSensor;
 
 void setup(){
   // Initialize serial communication
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   // Wi-Fi
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -193,30 +193,11 @@ void loop(){
   // if the buffer is sent even if the remaining elements are from the previous buffer, replace them.
   // // replace their time values from [latest time] to [latest time + k] where k is the number of slots remaining in the buffer from the previous buffer iteration
   // 
-
-  if (Firebase.RTDB.getInt(&fbdo, "/soundSensor/isCrying/")) {
-    if (fbdo.dataType() == "int") {
-      isCrying = fbdo.intData();
-      // Serial.println("The isCrying value is " + isCrying);
-    }
-  }
-  else {
-    Serial.println("Can't Fetch isCrying " + fbdo.errorReason());
-  }
-
-  if (isCrying == 1) {
-    Serial.println("Crying!");
-    digitalWrite(ledPin, HIGH); // Turn the LED on
-  } else {
-    digitalWrite(ledPin, LOW); // Turn the LED off
-  }
-
-
+  
   if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_recording/")) {
     if (fbdo.dataType() == "int") {
       isRecording = fbdo.intData();
-      Serial.print("The isRecording value is ");
-      Serial.println(isRecording);
+      Serial.println("The isRecording value is " + isRecording);
     }
   }
   else {

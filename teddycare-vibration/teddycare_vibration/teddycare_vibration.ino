@@ -1,29 +1,27 @@
 #include <Arduino.h>
-// #include <WiFi.h>
-// #include <WiFiClient.h>
-// #include <WiFi.h>
+#include <WiFi.h>
 // Firebase
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 
-#define WIFI_SSID "SILVER"
-#define WIFI_PASSWORD "dy3fao123"
+#define WIFI_SSID ""
+#define WIFI_PASSWORD ""
 
 // Firebase
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-#define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
-#define DATABASE_URL "https://test1-a4e94-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+#define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
+#define DATABASE_URL "https://teddycare-12aaf-default-rtdb.asia-southeast1.firebasedatabase.app/"
 // Firebase variables
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 
 
 // Data structures
-#define BUFFER_MAX_LEN 100
+#define BUFFER_MAX_LEN 200
 typedef struct DataPoint {
     int delay; // index to insert item
     int ir_value;
@@ -54,36 +52,30 @@ int insert_pt_array(PointArray *buffer, DataPoint item){
   return 0;
 }
 
-// const int motor_pin = D8;
-// const int motor_two = D9;
-const int motor_pin = 22;
-const int motor_two = 23;
-const int HIGHER = 255; // assume 20 is lowest PWM state in this hardware config
-const int LOWER = 0;
-
-int PULSE_RECORD_TIME_DURATION = 30000;
-FirebaseJsonArray json_array;
 FirebaseJson json_object;
 FirebaseJsonData result; // object that keeps the deserializing result
+
 char db_path[70]; // for the path of the data in the database
 PointArray long_array;
-
 int batch = 100;
 int is_recording = 0;
 int is_vibrating = 0;
 int counter = 0;
+
+// PWM an
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
 unsigned long rest_interval = 500;
-unsigned long beat_interval = 20;
-unsigned long war_interval = 25;
+unsigned long beating_interval = 25;
 
-
-
+const int MOTOR_TWO_PIN = 23;
+const int PWM_CHANNEL_TWO = 1; 
+const int PWM_FREQ = 5000;     // Recall that Arduino Uno is ~490 Hz. Official ESP32 example uses 5,000Hz
+const int PWM_RESOLUTION = 8; // We'll use same resolution as Uno (8 bits, 0-255) but ESP32 can go up to 16 bits 
 
 void setup() {
   // Initialize serial communication
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   // Wi-Fi
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -117,99 +109,63 @@ void setup() {
 
   //D.S
   init_pt_array(&long_array);
-    pinMode(motor_pin,OUTPUT);  // set motor pin as output
-  pinMode(motor_two, OUTPUT); //set bigger group output
+  // MOTOR_PIN_tWO
+  ledcSetup(PWM_CHANNEL_TWO, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(MOTOR_TWO_PIN, PWM_CHANNEL_TWO);
 }
 
 void loop(){     
   counter = 0; //reset the counter value for a clean life.
-    if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_vibrating")) {
-      if (fbdo.dataType() == "int") {
-        is_vibrating = fbdo.intData();
-        Serial.print("VALUE OF ISVIBRATING IS");
-        Serial.print(is_vibrating);
-      }
-    } else {
-      Serial.println("FAILED: " + fbdo.errorReason());
+  if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_vibrating")) {
+    if (fbdo.dataType() == "int") {
+      is_vibrating = fbdo.intData();
+      Serial.print("The value of is_vibrating is:");
+      Serial.println(is_vibrating);
     }
-
-
+  } else {
+    Serial.println("FAILED: " + fbdo.errorReason());  }
+    
   if (is_vibrating) {
-    while(1){
+    for (counter = 0; counter < BUFFER_MAX_LEN; counter++) {
       sprintf(db_path, "/heartbeat_data/preprocessed_heartbeat/spikes/%d", counter);
-      Serial.println(counter);
       if (Firebase.RTDB.getJSON(&fbdo, db_path)) {
         const String rawData = fbdo.payload();
-        delay(20);
-          if (json_object.setJsonData(rawData)) {
-            // Deserialize the json object and insert to the array
-            DataPoint new_dp;          
-            json_object.get(result, "delay"); // delay
-            if (result.success) new_dp.delay = result.to<int>();
-          
-            json_object.get(result, "ir_value"); //ir value'
-            if (result.success) new_dp.ir_value = result.to<int>();
-            
-            json_object.get(result, "peak"); //peak
-            if (result.success) new_dp.peak = result.to<int>();
-            
-            new_dp.valid = 1;
-            // Serial.println(new_dp.delay);
-            // Serial.println(new_dp.ir_value);
-            // Serial.println(new_dp.peak);
-            insert_pt_array(&long_array, new_dp);
-
-          }
-      } else {
-        Serial.println("Error in fetching the JSON Object! ");
-        break;
-      } 
-      counter++;
+        if (json_object.setJsonData(rawData)) {
+          DataPoint new_dp;          
+          json_object.get(result, "delay"); // delay
+          if (result.success) new_dp.delay = result.to<int>();        
+          json_object.get(result, "ir_value"); //ir value'
+          if (result.success) new_dp.ir_value = result.to<int>();          
+          json_object.get(result, "peak"); //peak
+          if (result.success) new_dp.peak = result.to<int>();
+          new_dp.valid = 1;
+          insert_pt_array(&long_array, new_dp);
+        }
+        delay(50);
+      } else {Serial.println("Error in fetching the JSON Object! ");break;}
     }
-
     // Mechanical actuation
-
-    // baka ifetch ulit yung is_vibrating everytime, 
     int index = 0;
-    while(1) {
+    while(is_vibrating) {
       if (long_array.arr[index].valid == 1) {
-        currentMillis = millis();
-        previousMillis = currentMillis;   
-        if(long_array.arr[index].peak == 1) { //peak
-          while(currentMillis - previousMillis < war_interval) {
-            currentMillis = millis();
-            analogWrite(motor_pin, HIGHER);
-            analogWrite(motor_two, HIGHER);
-            Serial.println("ON");
-            // previousMillis = currentMillis;
-          }
-        } else { // trough
-          while(currentMillis - previousMillis < beat_interval) {
-            currentMillis = millis();
-            analogWrite(motor_pin, HIGHER);
-            // previousMillis = currentMillis;
-            Serial.println("pwede na level");
-          }
-        }
-
-        currentMillis = millis();
-        previousMillis = currentMillis;
-        // Rest Area  
-        while(currentMillis - previousMillis < rest_interval) {
-          currentMillis = millis();
-          analogWrite(motor_two, LOW);
-          analogWrite(motor_pin, LOW);
-          Serial.println("iminhere");
-          // previousMillis = currentMillis;
-        }
+        ledcWrite(PWM_CHANNEL_TWO, long_array.arr[index].ir_value);          
+        delay(beating_interval);
+        // Rest Area       
+        ledcWrite(PWM_CHANNEL_TWO, LOW);
+        delay(long_array.arr[index].delay);
         index++;
       }
       else {
         break;
       }
+      if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_vibrating")) {
+        if (fbdo.dataType() == "int") {
+          is_vibrating = fbdo.intData();          
+        }
+      } else {
+        Serial.println("FAILED: " + fbdo.errorReason());
+      }
     }
   }
     
 }
-
-    // Dapat may array tayo eh.
