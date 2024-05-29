@@ -6,7 +6,7 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 // Time
-#include "time.h"
+// #include "time.h"
 
 // Audio
 #include "DFRobotDFPlayerMini.h"
@@ -17,13 +17,16 @@ DFRobotDFPlayerMini myDFPlayer;
 #define SOUND_SENSOR_PIN 35
 
 // Constants
-#define SOUND_WINDOW_DURATION 5000          // Recording length for initial detection of crying
+#define SOUND_WINDOW_DURATION 3000          // Recording length for initial detection of crying
 #define SOUND_THRESHOLD 3500                // Threshold for baby crying
 #define SOUND_COOLDOWN 60000                // Gap between crying readings (60000 = 1 minute)
 
 // Network credentials
-#define WIFI_SSID "DragonsDen"
-#define WIFI_PASSWORD "iotcup2024fusrodah"
+// #define WIFI_SSID "DragonsDen"
+// #define WIFI_PASSWORD "iotcup2024fusrodah"
+#define WIFI_SSID "SILVER"
+#define WIFI_PASSWORD "dy3fao123"
+
 
 // Firebase credentials
 #define API_KEY "AIzaSyCYMkG_fXoxCRsKImpuWSHvSOZq_zv1fJU"
@@ -60,25 +63,16 @@ unsigned int playIndex = -1;
 bool audioFinished = false;
 unsigned int volume = 15;
 
-void printLocalTime() {
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
-    Serial.println("Failed to obtain time");
-    return;
-  }
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-}
-
-void getTimeString(char* timeString) {
-    struct tm timeinfo;
-    if(!getLocalTime(&timeinfo)){
-        Serial.println("Failed to obtain time");
-        return;
-    }
+// void getTimeString(char* timeString) {
+//     struct tm timeinfo;
+//     if(!getLocalTime(&timeinfo)){
+//         Serial.println("Failed to obtain time");
+//         return;
+//     }
     
-    // Format time into string with Firebase format
-    strftime(timeString, 30, "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
-}
+//     // Format time into string with Firebase format
+//     strftime(timeString, 30, "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+// }
 
 void setup() {
   
@@ -139,16 +133,16 @@ void setup() {
 
 void loop() {
 
-  // initialize and get the time
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  // // initialize and get the time
+  // configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
   // Record start time
   unsigned long startTime = millis();
 
-  // Detect if crying for 5 seconds
+  // Detect if crying for window
   while ((millis() - startTime < SOUND_WINDOW_DURATION) && (cryingCoolDown == SOUND_COOLDOWN)) {
     int soundValue = analogRead(SOUND_SENSOR_PIN);   // Read value from sensor
-    Serial.println(soundValue);
+    // Serial.println(soundValue);
     if (soundValue > SOUND_THRESHOLD) {
       isCrying = 1;
       Serial.println("Baby is crying!");
@@ -184,54 +178,50 @@ void loop() {
         }
       }
 
-      // Send start time
-      if (sendStartTimePending) {
-        getTimeString(timeStr);
-        if (Firebase.RTDB.setString(&fbdo, "/soundSensor/startTime", timeStr)) {
-          Serial.println();
-          Serial.print(timeStr);
-          Serial.print(" - successfully saved to: " + fbdo.dataPath());
-          Serial.println(" (" + fbdo.dataType() + ") ");
-          sendStartTimePending = false;
-        } else {
-          Serial.println("FAILED: " + fbdo.errorReason());
-          sendStartTimePending = true;
-        }
-      }
+      // // Send start time
+      // if (sendStartTimePending) {
+      //   getTimeString(timeStr);
+      //   if (Firebase.RTDB.setString(&fbdo, "/soundSensor/startTime", timeStr)) {
+      //     Serial.println();
+      //     Serial.print(timeStr);
+      //     Serial.print(" - successfully saved to: " + fbdo.dataPath());
+      //     Serial.println(" (" + fbdo.dataType() + ") ");
+      //     sendStartTimePending = false;
+      //   } else {
+      //     Serial.println("FAILED: " + fbdo.errorReason());
+      //     sendStartTimePending = true;
+      //   }
+      // }
     }
 
     // Read audio to play
     Serial.println("Ready to read from the database.");
     if (Firebase.RTDB.getString(&fbdo, "/speaker/audioPlaying")) {
-      if (fbdo.dataType() == "string") {
-        currentAudio = fbdo.stringData();
-        Serial.print("The current audio playing is: ");
-        Serial.print(currentAudio);
-        Serial.println();
-      }
+      currentAudio = fbdo.stringData();
+      Serial.print("The current audio playing is: ");
+      Serial.print(currentAudio);
+      Serial.println();
     } else {
       Serial.println("FAILED: " + fbdo.errorReason());
     }
 
-    // Read audio to play
+    // Read volume to play
     Serial.println("Ready to read from the database.");
     if (Firebase.RTDB.getString(&fbdo, "/speaker/volume")) {
-      if (fbdo.dataType() == "int") {
-        volume = fbdo.intData();
-        Serial.print("The current volume playing is: ");
-        Serial.print(volume);
-        Serial.println();
-      }
+      volume = fbdo.intData();
+      Serial.print("The current volume playing is: ");
+      Serial.print(volume);
+      Serial.println();
     } else {
       Serial.println("FAILED: " + fbdo.errorReason());
     }
 
     // Find index based on audio to play
-    if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby.wav") {
+    if (currentAudio == "lullaby.wav") {
       playIndex = 3;
-    } else if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby2.wav") {
+    } else if (currentAudio == "lullaby2.wav") {
       playIndex = 4;
-    } else if (currentAudio == "gs://teddycare-12aaf.appspot.com/lullaby3.wav") {
+    } else if (currentAudio == "lullaby3.wav") {
       playIndex = 5;
     } else {
       playIndex = 0; // No audio playing!
@@ -252,6 +242,7 @@ void loop() {
     isCrying = 0;
   }
 
+  // Set volume
   myDFPlayer.volume(volume);
   
   // Play audio
