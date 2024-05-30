@@ -17,10 +17,10 @@
 // Network credentials
 // #define WIFI_SSID "GlobeAtHome_8A984_2.4"
 // #define WIFI_PASSWORD "MCm7fGGY"
-#define WIFI_SSID "SILVER"
-#define WIFI_PASSWORD "dy3fao123"
-// #define WIFI_SSID "DragonsDen"
-// #define WIFI_PASSWORD "iotcup2024fusrodah"
+// #define WIFI_SSID "SILVER"
+// #define WIFI_PASSWORD "dy3fao123"
+#define WIFI_SSID "DragonsDen"
+#define WIFI_PASSWORD "iotcup2024fusrodah"
 // #define WIFI_SSID "dcs-students2"
 // #define WIFI_PASSWORD "W1F14students"
 // #define WIFI_SSID "ENGG-Student-WiFi"
@@ -193,6 +193,23 @@ void loop(){
   // if the buffer is sent even if the remaining elements are from the previous buffer, replace them.
   // // replace their time values from [latest time] to [latest time + k] where k is the number of slots remaining in the buffer from the previous buffer iteration
   // 
+
+   if (Firebase.RTDB.getInt(&fbdo, "/soundSensor/isCrying/")) {
+    if (fbdo.dataType() == "int") {
+      isCrying = fbdo.intData();
+      Serial.println("The isCrying value is " + isCrying);
+    }
+  }
+  else {
+    Serial.println("Can't Fetch isCrying " + fbdo.errorReason());
+  }
+
+  if (isCrying == 1) {
+    Serial.println("Crying!");
+    digitalWrite(ledPin, HIGH); // Turn the LED on
+  } else {
+    digitalWrite(ledPin, LOW); // Turn the LED off
+  }
   
   if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_recording/")) {
     if (fbdo.dataType() == "int") {
