@@ -225,7 +225,7 @@ void loop(){
     Serial.println("Starting Recording");
     unsigned long startTime = millis();    
     int duration = 0;
-
+    subset.i = 0
     while((duration < PULSE_RECORD_TIME_DURATION)) {
       // Record the IR readings
       reading = particleSensor.getIR();
