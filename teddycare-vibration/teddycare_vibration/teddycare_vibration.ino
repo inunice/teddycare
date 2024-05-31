@@ -141,7 +141,7 @@ void loop(){
           new_dp.valid = 1;
           insert_pt_array(&long_array, new_dp);
         }
-        delay(50);
+        delay(10);
       } else {Serial.println("Error in fetching the JSON Object! ");break;}
     }
     // Mechanical actuation

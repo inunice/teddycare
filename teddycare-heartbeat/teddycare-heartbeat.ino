@@ -242,7 +242,7 @@ void loop(){
           sendDataPrevMillis = millis();    // send every second
 
           // transfer contents from RingBuffer to FirebaseJsonArray
-          for (int j = 0; j <= BUFFER_MAX_LEN; j++){
+          for (int j = 0; j < BUFFER_MAX_LEN; j++){
             FirebaseJson data_point;
             data_point.add("from_start_device_time", subset.arr[j].from_start_device_time);
             data_point.add("ir_value", subset.arr[j].ir_value);
