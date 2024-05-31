@@ -227,7 +227,7 @@ void loop(){
       new_tuple.ir_value = reading - 90000 ; // for scaling
       Serial.println(new_tuple.ir_value);
 
-      if(90000 < reading < 200000 && insert_ring_buffer(&subset, new_tuple) ) { 
+      if((90000 < reading < 200000) && insert_ring_buffer(&subset, new_tuple) ) { 
         // send to firebase
         // print_ring_buffer(&subset);
         if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) {
