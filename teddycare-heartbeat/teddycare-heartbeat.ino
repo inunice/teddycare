@@ -15,10 +15,8 @@
 #include "time.h"
 
 // Network credentials
-// #define WIFI_SSID "DragonsDen"
-// #define WIFI_PASSWORD "iotcup2024fusrodah"
-#define WIFI_SSID "SILVER"
-#define WIFI_PASSWORD "dy3fao123"
+#define WIFI_SSID "DragonsDen"
+#define WIFI_PASSWORD "iotcup2024fusrodah"
 
 // Firebase credentials
 // #define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
@@ -309,11 +307,3 @@ void loop(){
   }
 }
 
-/*
-Issues:
-What if bumitaw, we need to record only the values in a batch with > 90000.
-Discard the 256 at the end.
-We need to update the data structure such that it records time as well.
-
-How do we process this data?
-**/

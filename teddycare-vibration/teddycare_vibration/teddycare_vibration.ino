@@ -5,8 +5,8 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
+#define WIFI_SSID "SILVER"
+#define WIFI_PASSWORD "dy3fao123"
 
 // Firebase
 FirebaseData fbdo;
@@ -60,6 +60,7 @@ PointArray long_array;
 int batch = 100;
 int is_recording = 0;
 int is_vibrating = 0;
+int play_default = 0;
 int counter = 0;
 
 // PWM an
@@ -69,7 +70,7 @@ unsigned long rest_interval = 500;
 unsigned long beating_interval = 25;
 
 const int MOTOR_TWO_PIN = 23;
-const int PWM_CHANNEL_TWO = 1; 
+// const int PWM_CHANNEL_TWO = 1; 
 const int PWM_FREQ = 5000;     // Recall that Arduino Uno is ~490 Hz. Official ESP32 example uses 5,000Hz
 const int PWM_RESOLUTION = 8; // We'll use same resolution as Uno (8 bits, 0-255) but ESP32 can go up to 16 bits 
 
@@ -110,12 +111,14 @@ void setup() {
   //D.S
   init_pt_array(&long_array);
   // MOTOR_PIN_tWO
-  ledcSetup(PWM_CHANNEL_TWO, PWM_FREQ, PWM_RESOLUTION);
-  ledcAttachPin(MOTOR_TWO_PIN, PWM_CHANNEL_TWO);
+  // ledcSetup(PWM_CHANNEL_TWO, PWM_FREQ, PWM_RESOLUTION);
+  // ledcAttachPin(MOTOR_TWO_PIN, PWM_CHANNEL_TWO);
+  ledcAttach(MOTOR_TWO_PIN, PWM_FREQ, PWM_RESOLUTION);
 }
 
 void loop(){     
   counter = 0; //reset the counter value for a clean life.
+  // Repeatedly check for is_vibrating status
   if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_vibrating")) {
     if (fbdo.dataType() == "int") {
       is_vibrating = fbdo.intData();
@@ -126,37 +129,72 @@ void loop(){
     Serial.println("FAILED: " + fbdo.errorReason());  }
     
   if (is_vibrating) {
-    for (counter = 0; counter < BUFFER_MAX_LEN; counter++) {
-      sprintf(db_path, "/heartbeat_data/preprocessed_heartbeat/spikes/%d", counter);
-      if (Firebase.RTDB.getJSON(&fbdo, db_path)) {
-        const String rawData = fbdo.payload();
-        if (json_object.setJsonData(rawData)) {
-          DataPoint new_dp;          
-          json_object.get(result, "delay"); // delay
-          if (result.success) new_dp.delay = result.to<int>();        
-          json_object.get(result, "ir_value"); //ir value'
-          if (result.success) new_dp.ir_value = result.to<int>();          
-          json_object.get(result, "peak"); //peak
-          if (result.success) new_dp.peak = result.to<int>();
-          new_dp.valid = 1;
-          insert_pt_array(&long_array, new_dp);
-        }
-        delay(10);
-      } else {Serial.println("Error in fetching the JSON Object! ");break;}
+    // if is_vibrating is true, check for play_default
+    if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/play_default")) {
+      if (fbdo.dataType() == "int") {
+        is_vibrating = fbdo.intData();
+        Serial.print("The value of play_default is:");
+        Serial.println(play_default);
+      }
+    } else {
+      Serial.println("FAILED: " + fbdo.errorReason());  }
+    
+    if (play_default){
+      // if play_default is true, get the default data
+      for (counter = 0; counter < BUFFER_MAX_LEN; counter++) {
+        sprintf(db_path, "/heartbeat_data/default_heartbeat/spikes/%d", counter);
+        if (Firebase.RTDB.getJSON(&fbdo, db_path)) {
+          const String rawData = fbdo.payload();
+          if (json_object.setJsonData(rawData)) {
+            DataPoint new_dp;          
+            json_object.get(result, "delay"); // delay
+            if (result.success) new_dp.delay = result.to<int>();        
+            json_object.get(result, "ir_value"); //ir value'
+            if (result.success) new_dp.ir_value = result.to<int>();          
+            json_object.get(result, "peak"); //peak
+            if (result.success) new_dp.peak = result.to<int>();
+            new_dp.valid = 1;
+            insert_pt_array(&long_array, new_dp);
+          }
+          delay(10);
+        } else {break;}
+      }
+    } else {
+      //else, get the preprocessed data from scanned data
+      for (counter = 0; counter < BUFFER_MAX_LEN; counter++) {
+        sprintf(db_path, "/heartbeat_data/preprocessed_heartbeat/spikes/%d", counter);
+        if (Firebase.RTDB.getJSON(&fbdo, db_path)) {
+          const String rawData = fbdo.payload();
+          if (json_object.setJsonData(rawData)) {
+            DataPoint new_dp;          
+            json_object.get(result, "delay"); // delay
+            if (result.success) new_dp.delay = result.to<int>();        
+            json_object.get(result, "ir_value"); //ir value'
+            if (result.success) new_dp.ir_value = result.to<int>();          
+            json_object.get(result, "peak"); //peak
+            if (result.success) new_dp.peak = result.to<int>();
+            new_dp.valid = 1;
+            insert_pt_array(&long_array, new_dp);
+          }
+          delay(10);
+        } else {break;}
+      }
     }
+    
     // Mechanical actuation
     int index = 0;
     while(is_vibrating) {
       if (long_array.arr[index].valid == 1) {
-        ledcWrite(PWM_CHANNEL_TWO, long_array.arr[index].ir_value);          
-        delay(beating_interval);
+        ledcWrite(MOTOR_TWO_PIN, long_array.arr[index].ir_value);          
+        delay(beating_interval); // interval to allow the motor to gain momentum. 
         // Rest Area       
-        ledcWrite(PWM_CHANNEL_TWO, LOW);
-        delay(long_array.arr[index].delay);
-        index++;
+        ledcWrite(MOTOR_TWO_PIN, LOW);
+        delay(long_array.arr[index].delay); // delay determined from the distances between the data points
+        index = (index + 1) % BUFFER_MAX_LEN;
       }
       else {
-        break;
+        index = (index + 1) % BUFFER_MAX_LEN;
+        // stay in the loop 
       }
       if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_vibrating")) {
         if (fbdo.dataType() == "int") {
@@ -164,6 +202,9 @@ void loop(){
         }
       } else {
         Serial.println("FAILED: " + fbdo.errorReason());
+      }
+      if (is_vibrating == 0) {
+        init_pt_array(&long_array); // clear the values due to ring implementation.
       }
     }
   }
