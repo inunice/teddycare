@@ -158,6 +158,7 @@ void loop(){
           }
           delay(10);
         } else {break;}
+        counter++;
       }
     } else {
       //else, get the preprocessed data from scanned data
@@ -178,6 +179,7 @@ void loop(){
           }
           delay(10);
         } else {break;}
+        counter++;
       }
     }
     
