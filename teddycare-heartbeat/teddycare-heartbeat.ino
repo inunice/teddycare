@@ -15,16 +15,10 @@
 #include "time.h"
 
 // Network credentials
-// #define WIFI_SSID "GlobeAtHome_8A984_2.4"
-// #define WIFI_PASSWORD "MCm7fGGY"
-// #define WIFI_SSID "SILVER"
-// #define WIFI_PASSWORD "dy3fao123"
-#define WIFI_SSID "DragonsDen"
-#define WIFI_PASSWORD "iotcup2024fusrodah"
-// #define WIFI_SSID "dcs-students2"
-// #define WIFI_PASSWORD "W1F14students"
-// #define WIFI_SSID "ENGG-Student-WiFi"
-// #define WIFI_PASSWORD "c03l1br@ry"
+// #define WIFI_SSID "DragonsDen"
+// #define WIFI_PASSWORD "iotcup2024fusrodah"
+#define WIFI_SSID "SILVER"
+#define WIFI_PASSWORD "dy3fao123"
 
 // Firebase credentials
 // #define API_KEY "AIzaSyC21Lyo6PDNBpShPR1b8PZ2HreeaTwRpa0"
@@ -197,7 +191,7 @@ void loop(){
    if (Firebase.RTDB.getInt(&fbdo, "/soundSensor/isCrying/")) {
     if (fbdo.dataType() == "int") {
       isCrying = fbdo.intData();
-      Serial.println("The isCrying value is " + isCrying);
+      Serial.println("The isCrying value is " + String(isCrying));
     }
   }
   else {
@@ -214,7 +208,7 @@ void loop(){
   if (Firebase.RTDB.getInt(&fbdo, "/heartbeat_data/is_recording/")) {
     if (fbdo.dataType() == "int") {
       isRecording = fbdo.intData();
-      Serial.println("The isRecording value is " + isRecording);
+      Serial.println("The isRecording value is " + String(isRecording));
     }
   }
   else {
@@ -225,7 +219,7 @@ void loop(){
     Serial.println("Starting Recording");
     unsigned long startTime = millis();    
     int duration = 0;
-    subset.i = 0
+    subset.i = 0;
     while((duration < PULSE_RECORD_TIME_DURATION)) {
       // Record the IR readings
       reading = particleSensor.getIR();
